@@ -18,7 +18,7 @@
           <li class="nav-item">
              &nbsp;| Your Score <b>{{score}}</b>
           </li>
-            {% if choix|length > 3 %}
+            {% if choix|length > 1 %}
           <li class="nav-item">
             &nbsp;| Question value {{qscore}}
           </li>
@@ -27,11 +27,16 @@
       </div>
 
     </nav>
-    <img src="/static/{{img}}.png" height="300"/><br>
-    <div id="choices">
-    {% for c in choix %}
-       <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary btn-sm">{{c}}</button></a><br>
-    {% endfor %}
+    <div  class="mx-auto justify-content-center">
+        <div class="mx-auto justify-content-center">
+            <img src="/static/{{img}}.png" height="300" /><br>
+        </div>
+
+        <div id="choices" style = 'max-width: 300px;'>
+        {% for c in choix %}
+           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary">{{c}}</button></a>
+        {% endfor %}
+        </div>
     </div>
 </body>
 </html>

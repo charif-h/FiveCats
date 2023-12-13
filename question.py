@@ -1,12 +1,12 @@
 import random
 
 class Question:
-    def __init__(self, imgs, players):
-        self.choix = random.sample(imgs, k=10)
+    def __init__(self, imgs, players, choices):
+        self.choix = random.sample(imgs, k=choices)
         self.image = random.choice(self.choix)
         self.choix.sort()
         self.active = True
-        self.score_id = 9
+        self.score_id = choices - 1
         self.scores = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55]
         self.players_choices = {}
         for p in players:

@@ -6,14 +6,13 @@
     <title>Game</title>
 </head>
 <body>
-    <img src="/static/{{img}}.png"/>
-
+<div class="row">
+    <div class="col-3">
     <table class="table table-striped">
             <thead>
               <tr>
                 <th>User Name</th>
                 <th>Score</th>
-                <th>Token</th>
               </tr>
             </thead>
             <tbody>
@@ -21,10 +20,12 @@
               <tr>
                 <td>{{ r[0] }}</td>
                   <td>{{ r[1] }}</td>
-                  <td>{{ r[2] }}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
+        </div>
+    <div class="col-8"><img src="/static/{{img}}.png"/></div>
+    </div>
 </body>
 </html>

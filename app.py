@@ -8,7 +8,8 @@ app = Flask(__name__, static_url_path='/static')
 
 players = []
 imgs = []
-Timer = 30
+choices = 5
+Timer = choices*12
 
 
 @app.route('/')
@@ -18,7 +19,7 @@ def hello():
     imgs = os.listdir('static')
     imgs = [img[:-4] for img in imgs]
 
-    question = Question(imgs, players)
+    question = Question(imgs, players, choices)
     print(question)
     return render_template('index.html', players = players_to_table())
 
@@ -27,7 +28,8 @@ def session():
     scores = []
     for p in players:
         scores.append([p.name, p.score])
-    return '<b>Hello, World!</b><img src="/static/' + question.image + '.png"/>' + str(question.choix) + str(scores)
+    #return '<b>Hello, World!</b><img src="/static/' + question.image + '.png"/>' + str(question.choix) + str(scores)
+    return render_template('game.html', players=players_to_table(), img=question.image)
 
 @app.route('/addplayer', methods=['POST'])
 def addplayer():
@@ -56,18 +58,21 @@ def choose(token, answer):
     player.score += question.check_answer(player.name, answer)
     if not question.active:
         print('new question')
-        question = Question(imgs, players)
+        #question = Question(imgs, players, choices)
+        newQuestion()
     return redirect('/player/' + token)
 
 def players_to_table():
     tbl = []
+    players.sort(key=lambda x: x.score, reverse=True)
     for p in players:
         tbl.append([p.name, p.score, p.token])
     return tbl
 
 def newQuestion():
     global question
-    question = Question(imgs, players)
+    question = Question(imgs, players, choices)
+    imgs.remove(question.image)
 
 if __name__ == '__main__':
     app.run()
