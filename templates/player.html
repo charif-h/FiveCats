@@ -7,10 +7,25 @@
     <title>Player {{name}}</title>
 </head>
 <body>
-    <h1>{{name}}</h1>
-    <h2>Your Score {{score}}</h2>
-    <h3>Question value {{qscore}}</h3>
-    <img src="/static/{{img}}.png" height="100"/><br>
+    <nav class="navbar navbar-expand-sm bg-light">
+
+      <div class="container-fluid">
+        <!-- Links -->
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <b>{{name}}</b>
+          </li>
+          <li class="nav-item">
+             &nbsp;| Your Score <b>{{score}}</b>
+          </li>
+          <li class="nav-item">
+            &nbsp;| Question value {{qscore}}
+          </li>
+        </ul>
+      </div>
+
+    </nav>
+    <img src="/static/{{img}}.png" height="300"/><br>
     <div id="choices">
     {% for c in choix %}
        <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary btn-sm">{{c}}</button></a><br>
