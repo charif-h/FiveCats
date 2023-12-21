@@ -20,8 +20,8 @@ def hello():
     imgs = os.listdir('static')
     imgs = [img[:-4] for img in imgs]
 
-    question = Question(imgs, players, choices)
-    print(question)
+    #question = Question(imgs, players, choices)
+    #print(question)
     return render_template('index.html', players = players_to_table())
 
 @app.route('/game', methods=['POST', 'GET'])
@@ -30,6 +30,7 @@ def session():
     for p in players:
         scores.append([p.name, p.score])
     #return '<b>Hello, World!</b><img src="/static/' + question.image + '.png"/>' + str(question.choix) + str(scores)
+    question = Question(imgs, players, choices)
     return render_template('game.html', players=players_to_table(), img=question.image)
 
 @app.route('/addplayer', methods=['POST'])

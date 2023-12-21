@@ -24,6 +24,32 @@
         socket.on('new_question', function(data){
             document.getElementById('qimage').src = "/static/" + data['image'] + ".png"
         });
+
+        var distance = 30;
+        var x = setInterval(function() {
+
+          document.getElementById("prog-timer").innerHTML = distance + "s ";
+          document.getElementById("prog-timer").setAttribute('aria-valuenow', distance);
+          document.getElementById("prog-timer").setAttribute('style', 'width:'+Number(100*distance/30)+'%');
+
+          // If the count down is over, write some text
+          if (distance <= 5){
+            document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-danger');
+          }
+          if (distance < 0) {
+            document.getElementById("prog-timer").innerHTML = "EXPIRED the answer is: <b>{{ img }}</b>";
+            document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-info');
+
+            document.getElementById("prog-timer").setAttribute('aria-valuenow', 6 + distance);
+            document.getElementById("prog-timer").setAttribute('style', 'width:'+Number(100*(6 + distance)/5)+'%');
+          }
+          if (distance < -4){
+            clearInterval(x);
+            location.reload();
+            document.getElementById("prog-timer").innerHTML = "NEW QUESTION";
+          }
+          distance -= 1;
+        }, 1000);
     </script>
     <title>Game</title>
 </head>
@@ -47,7 +73,13 @@
             </tbody>
           </table>
         </div>
-    <div class="col-8"><img id="qimage" src="/static/{{img}}.png"/></div>
+
+    <div class="col-8">
+        <div style="width:768px;">
+        <div class="progress-bar" id="prog-timer" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="30" ></div>
+        </div>
+        <img id="qimage" src="/static/{{img}}.png"/>
+    </div>
     </div>
 </body>
 </html>
