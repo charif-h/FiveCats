@@ -1,4 +1,5 @@
 import random
+from flask import jsonify
 
 class Question:
     def __init__(self, imgs, players, choices):
@@ -33,3 +34,10 @@ class Question:
             return self.scores[self.score_id]
         else:
             return min(self.scores[len(self.players_choices[player_token]) - 1], self.scores[self.score_id])
+
+    def choices_to_json(self):
+        print("ici ...")
+        print(self.players_choices)
+        print()
+        return jsonify(self.players_choices)
+

@@ -2,8 +2,52 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="200" />
+    <!--<meta http-equiv="refresh" content="300" />-->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
+    <style>
+        .img-container {
+          position: relative;
+          width:300;
+          max-width:300;
+        }
+
+        .bottomright {
+          position: absolute;
+          bottom: 5px;
+          left:230px;
+          font-size: 16px;
+          border: 2px solid maroon;
+          border-radius: 5px;
+          background: papayawhip;
+          padding: 2px;
+        }
+
+        .qimage {
+          height: 300;
+          width: auto;
+        }
+    </style>
+    <script type="text/javascript">
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        socket.on('connect', function () {
+            console.log('Connected to the server');
+        });
+
+        socket.on('new_question', function(data){
+            document.getElementById('qimage').src = "/static/" + data['image'] + ".png";
+            document.getElementById('choices').innerHTML = "";
+
+            for(var i in data['choices']){
+                c = data['choices'][i];
+                document.getElementById('choices').innerHTML +=
+                    '<a href="/choose/{{name}}/' + c + '"><button class="btn btn-primary" onclick="sendMessage()">' + c + '</button></a>&nbsp;';
+            }
+
+
+        });
+    </script>
     <title>Player {{name}}</title>
 </head>
 <body>
@@ -28,13 +72,14 @@
 
     </nav>
     <div  class="mx-auto justify-content-center">
-        <div class="mx-auto justify-content-center">
-            <img src="/static/{{img}}.png" height="300" /><br>
+        <div class="mx-auto justify-content-center img-container">
+            <img  class="qimage" id="qimage" src="/static/{{img}}.png" height="300" /><br>
+            <div class="bottomright">{{qscore}} points</div>
         </div>
 
         <div id="choices" style = 'max-width: 300px;'>
         {% for c in choix %}
-           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary">{{c}}</button></a>
+           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary" onclick="sendMessage()">{{c}}</button></a>
         {% endfor %}
         </div>
     </div>
