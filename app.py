@@ -96,7 +96,6 @@ def handle_connect():
 def handle_message(message):
     print('Received message:', message)
     socketio.emit('response', 'you said ' + message)
-    #socketio.Server.emit('response', 'you said ' + message)
 
 @socketio.on('time_out')
 def handle_timeout():
