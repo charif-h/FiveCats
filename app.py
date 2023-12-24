@@ -83,7 +83,6 @@ def choose(token, answer):
     socketio.emit('update_score', players_to_table(False))
     if not question.active:
         print('new question')
-        #question = Question(imgs, players, choices)
         newQuestion()
     return redirect('/player/' + token)
 
