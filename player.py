@@ -7,7 +7,7 @@ class Player:
     self.name = name
     self.token = uuid4()
     self.score = 0
-    img = qrcode.make('https://five-cats-game.onrender.com/' + self.name, image_factory=qrcode.image.svg.SvgImage)
+    img = qrcode.make('https://five-cats-game.onrender.com/player/' + self.name, image_factory=qrcode.image.svg.SvgImage)
 
     with open('static/players/' + self.name + '.svg', 'wb') as qr:
       img.save(qr)
