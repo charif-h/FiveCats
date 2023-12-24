@@ -11,17 +11,13 @@
     <div class="container p-5 my-5 border">
         <h1>Game Style</h1>
         <form method="POST" action="/game">
-            <span><input type="radio" id="dependent_score" name="drone" value="dependent_score" checked />
-            <label for="dependent_score">Dependent players scores </label></span>
+            <span>Number of choices by question <input type="number" name="choices" value="10" min="4" max="10"> </span>
             <br>
-            <input type="radio" id="independent_score" name="drone" value="independent_score" />
-            <label for="independent_score">Independent player score </label>
+            <span>Time by question <input type="number" name="Timer" value="60" min="10" max="360"> sec</span>
             <br>
-            <span>Time by question <input type="number" value="30" width="20"> sec</span>
+            <span>Total number of questions <input type="number" name="total" value="0" min="0" max="100"> </span>
             <br>
-            <span>Total number of questions <input type="number" value="0" width="20"> </span>
-            <br>
-            <button type="submit" name="start" value="start" class="btn btn-primary">Go</button>
+            <button type="submit" name="start" value="start" class="btn btn-primary" {% if players|length == 0 %} disabled {%endif%}>Go</button>
           </form>
     </div>
     <div class="container p-5 my-5 border">

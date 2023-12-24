@@ -10,7 +10,8 @@ socketio = SocketIO(app)
 players = []
 imgs = []
 choices = 10
-Timer = choices*10
+Timer = choices*6
+total = 0
 
 
 @app.route('/')
@@ -27,10 +28,20 @@ def hello():
 @app.route('/game', methods=['POST', 'GET'])
 def session():
     global question
+    global choices
+    global Timer
+    global total
+    choices = int(request.form['choices'])
+    Timer = int(request.form['Timer'])
+    total = int(request.form['total'])
+
+    if total == 0:
+        total = len(imgs)
+
     scores = []
     for p in players:
         scores.append([p.name, p.score])
-    #return '<b>Hello, World!</b><img src="/static/' + question.image + '.png"/>' + str(question.choix) + str(scores)
+
     newQuestion()
     return render_template('game.html', players=players_to_table(), img=question.image)
 
