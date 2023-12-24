@@ -8,8 +8,8 @@
     <style>
         .img-container {
           position: relative;
-          width:300;
-          max-width:300;
+          width:500;
+          max-width:500;
         }
 
         .bottomright {
@@ -91,7 +91,7 @@
 
         <div id="choices" style = 'max-width: 300px;'>
         {% for c in choix %}
-           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary" onclick="sendMessage()">{{c}}</button></a>
+           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary btn-lg btn-block" onclick="sendMessage()">{{c}}</button></a>
         {% endfor %}
         </div>
     </div>
