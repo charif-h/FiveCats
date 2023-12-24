@@ -18,7 +18,7 @@ total = 0
 def hello():
     global question
     global imgs
-    imgs = os.listdir('static')
+    imgs = os.listdir('static/movies')
     imgs = [img[:-4] for img in imgs]
 
     #question = Question(imgs, players, choices)
@@ -59,11 +59,20 @@ def player(token):
         if str(p.name) == token:
             s += p.name
             player = p
-    print('question ',  question)
+
+    pq_choix = ""
+    pq_image = ""
+    pq_value = ""
+    if 'question' in globals():
+        pq_choix = question.players_choices[token]
+        pq_image = question.image
+        pq_value = question.getQuestionValue(token)
+        print("question exists")
+
 
     return render_template('player.html', name=player.name,
-                           score=player.score, choix=question.players_choices[token],
-                           img=question.image, qscore = question.getQuestionValue(token))
+                           score=player.score, choix=pq_choix,
+                           img=pq_image, qscore = pq_value)
 
 @app.route('/choose/<token>/<answer>', methods=['POST', 'GET'])
 def choose(token, answer):
@@ -88,6 +97,15 @@ def handle_message(message):
     print('Received message:', message)
     socketio.emit('response', 'you said ' + message)
     #socketio.Server.emit('response', 'you said ' + message)
+
+@socketio.on('time_out')
+def handle_timeout():
+    global question
+    question.time_out()
+    print(question)
+    socketio.emit('time_out')
+    socketio.emit('update_score', players_to_table(False))
+
 
 def players_to_table(with_token = True):
     tbl = []

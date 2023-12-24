@@ -24,7 +24,7 @@
         });
 
         socket.on('new_question', function(data){
-            document.getElementById('qimage').src = "/static/" + data['image'] + ".png";
+            document.getElementById('qimage').src = "/static/movies/" + data['image'] + ".png";
             answer_image = data['image'];
             distance = 30;
         });
@@ -41,7 +41,11 @@
           if (distance <= 5){
             document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-danger');
           }
+          if (distance == 0){
+            socket.emit('time_out');
+          }
           if (distance < 0) {
+
             document.getElementById("prog-timer").innerHTML = "EXPIRED the answer is: <b>" + answer_image + "</b>";
             document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-info');
 
@@ -83,7 +87,7 @@
         <div style="width:768px;">
         <div class="progress-bar" id="prog-timer" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="30" ></div>
         </div>
-        <img id="qimage" src="/static/{{img}}.png"/>
+        <img id="qimage" src="/static/movies/{{img}}.png"/>
     </div>
     </div>
 </body>

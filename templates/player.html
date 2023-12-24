@@ -35,9 +35,18 @@
             console.log('Connected to the server');
         });
 
+        socket.on('time_out', function(){
+            location.reload();
+        });
+
         socket.on('new_question', function(data){
-            document.getElementById('qimage').src = "/static/" + data['image'] + ".png";
+
+            document.getElementById('qimage').src = "/static/movies/" + data['image'] + ".png";
             document.getElementById('choices').innerHTML = "";
+            console.log('new question');
+
+            document.getElementById('waiting').style.display = "none";
+            document.getElementById('question_main').style.display = "";
 
             for(var i in data['choices']){
                 c = data['choices'][i];
@@ -71,10 +80,13 @@
       </div>
 
     </nav>
-    <div  class="mx-auto justify-content-center">
+        <div id="waiting" {% if img != "" %} style="display:none;" {%endif%}>
+            <span>Waiting for other players ...</span> <div class="spinner-border" role="status"></div>
+        </div>
+    <div  id='question_main' class="mx-auto justify-content-center" {% if img == "" %} style="display:none;" {%endif%}>
         <div class="mx-auto justify-content-center img-container">
-            <img  class="qimage" id="qimage" src="/static/{{img}}.png" height="300" /><br>
-            <div class="bottomright" id="score">{{qscore}} points</div>
+                <img  class="qimage" id="qimage" src="/static/movies/{{img}}.png" height="300" /><br>
+                <div class="bottomright" id="score">{{qscore}} points</div>
         </div>
 
         <div id="choices" style = 'max-width: 300px;'>

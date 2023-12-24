@@ -29,6 +29,10 @@ class Question:
 
         return ret
 
+    def time_out(self):
+        for p in self.players_choices.keys():
+            self.players_choices[p] = []
+
     def getQuestionValue(self, player_token=None):
         if player_token is None:
             return self.scores[self.score_id]
