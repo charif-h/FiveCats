@@ -109,7 +109,11 @@
             <tbody>
               {% for r in players %}
               <tr>
-                <td>{{ r[0] }}</td>
+                <td>
+                  <a href="#" class="player-link" data-name="{{ r[0] }}" data-qr="static/players/{{ r[0] }}.svg">
+                    {{ r[0] }}
+                  </a>
+                </td>
                 <td>{{ r[1] }}</td>
                 <td>
                     <a href="/player/{{ r[0] }}" target="_blank">
@@ -123,5 +127,37 @@
             </tbody>
           </table>
     </div>
+
+    <!-- Card modal for player info -->
+<div id="playerCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:260px; z-index:9999;">
+  <div class="card-header bg-warning text-center">
+    <span id="cardPlayerName" style="font-weight:bold;"></span>
+    <button type="button" class="btn-close float-end" aria-label="Close" onclick="closePlayerCard()"></button>
+  </div>
+  <div class="card-body text-center">
+    <span class="qr-bg">
+      <img id="cardPlayerQR" src="" style="width:120px;">
+    </span>
+  </div>
+</div>
+<div id="cardOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9998;" onclick="closePlayerCard()"></div>
+
+<script>
+  // Ouvre la carte au clic sur le nom du joueur
+  document.querySelectorAll('.player-link').forEach(function(link){
+    link.addEventListener('click', function(e){
+      e.preventDefault();
+      document.getElementById('cardPlayerName').textContent = this.dataset.name;
+      document.getElementById('cardPlayerQR').src = this.dataset.qr;
+      document.getElementById('playerCard').style.display = 'block';
+      document.getElementById('cardOverlay').style.display = 'block';
+    });
+  });
+  // Ferme la carte
+  function closePlayerCard(){
+    document.getElementById('playerCard').style.display = 'none';
+    document.getElementById('cardOverlay').style.display = 'none';
+  }
+</script>
 </body>
 </html>
