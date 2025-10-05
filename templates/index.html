@@ -2,45 +2,112 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
-<title>5 cats game</title>
+    <title>5 Cats Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: url('static/backgrounds/cats-bg.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+        }
+        .container {
+            background: rgba(34, 34, 34, 0.85);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+            color: #ffd700;
+            text-shadow: 2px 2px 8px #222;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #ff9800 0%, #ff5e62 100%);
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 10px #ffd700;
+        }
+        table {
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+        }
+        th, td {
+            color: #fff;
+            vertical-align: middle;
+        }
+        .fa-cat {
+            color: #ff9800;
+            margin-right: 10px;
+        }
+        #logo {
+            width: 80px;
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container p-5 my-5 border">
-        <h1>Game Style</h1>
-        <form method="POST" action="/game" target="_blank">
-            <span>Number of choices by question <input type="number" name="choices" value="10" min="4" max="10"> </span>
+    <div class="container p-5 my-5 border text-center">
+        <img id="logo" src="static/logo-cat.png" alt="5 Cats Game Logo">
+        <h1><i class="fa-solid fa-cat"></i>5 Cats Game</h1>
+        <form method="POST" action="/game" target="_blank" class="mt-4">
+            <span>
+                <i class="fa-solid fa-list-ol"></i>
+                Nombre de choix par question
+                <input type="number" name="choices" value="10" min="4" max="10" class="form-control d-inline w-auto mx-2">
+            </span>
             <br>
-            <span>Time by question <input type="number" name="Timer" value="60" min="10" max="360"> sec</span>
+            <span>
+                <i class="fa-solid fa-clock"></i>
+                Temps par question
+                <input type="number" name="Timer" value="60" min="10" max="360" class="form-control d-inline w-auto mx-2"> sec
+            </span>
             <br>
-            <span>Total number of questions <input type="number" name="total" value="0" min="0" max="100"> </span>
+            <span>
+                <i class="fa-solid fa-question"></i>
+                Nombre total de questions
+                <input type="number" name="total" value="0" min="0" max="100" class="form-control d-inline w-auto mx-2">
+            </span>
             <br>
-            <button type="submit" name="start" value="start" class="btn btn-primary" {% if players|length == 0 %} disabled {%endif%}>Go</button>
-          </form>
+            <button type="submit" name="start" value="start" class="btn btn-primary mt-3" {% if players|length == 0 %} disabled {%endif%}>
+                <i class="fa-solid fa-play"></i> Go
+            </button>
+        </form>
     </div>
     <div class="container p-5 my-5 border">
-        <h1>Players list</h1>
-        <form method="POST" action="/addplayer">
-            Player name
-            <input id ="player_name" name="player_name" type="text"/>
-            <button type="submit" name="addp" value="addp" class="btn btn-primary">Add</button>
+        <h1><i class="fa-solid fa-users"></i> Liste des joueurs</h1>
+        <form method="POST" action="/addplayer" class="mb-4">
+            <label for="player_name"><i class="fa-solid fa-user-plus"></i> Nom du joueur</label>
+            <input id="player_name" name="player_name" type="text" class="form-control d-inline w-auto mx-2"/>
+            <button type="submit" name="addp" value="addp" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Ajouter
+            </button>
         </form>
         <table class="table table-striped">
             <thead>
               <tr>
-                <th>User Name</th>
-                <th>Score</th>
-                <th>QRCODE</th>
+                <th><i class="fa-solid fa-user"></i> Nom</th>
+                <th><i class="fa-solid fa-star"></i> Score</th>
+                <th><i class="fa-solid fa-qrcode"></i> QR Code</th>
               </tr>
             </thead>
             <tbody>
               {% for r in players %}
               <tr>
                 <td>{{ r[0] }}</td>
-                  <td>{{ r[1] }}</td>
-                  <td><a href="/player/{{ r[0] }}" target="_blank"><img src="static/players/{{ r[0] }}.svg"></a></td>
+                <td>{{ r[1] }}</td>
+                <td>
+                    <a href="/player/{{ r[0] }}" target="_blank">
+                        <img src="static/players/{{ r[0] }}.svg" style="width:40px;">
+                    </a>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
