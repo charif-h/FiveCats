@@ -47,7 +47,22 @@ def session():
 
 @app.route('/addplayer', methods=['POST'])
 def addplayer():
-    players.append(Player(str(request.form.get('player_name'))))
+    name = request.form.get('player_name', '').strip()
+    error = None
+    if not name:
+        error = "Le nom du joueur ne peut pas être vide."
+    elif any(p.name == name for p in players):
+        error = f"Le joueur '{name}' existe déjà."
+    if error:
+        return render_template('index.html', players=players_to_table(), error=error)
+    players.append(Player(name))
+    return redirect('/')
+
+@app.route('/deleteplayer', methods=['POST'])
+def deleteplayer():
+    name = request.form.get('player_name')
+    global players
+    players = [p for p in players if p.name != name]
     return redirect('/')
 
 @app.route('/player/<token>', methods=['POST', 'GET'])
@@ -94,7 +109,7 @@ def handle_connect():
 @socketio.on('message')
 def handle_message(message):
     print('Received message:', message)
-    socketio.emit('response', 'you said ' + message, broadcast=True)
+    socketio.emit('response', 'you said ' + message)
 
 @socketio.on('time_out')
 def handle_timeout():
