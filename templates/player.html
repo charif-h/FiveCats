@@ -2,30 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!--<meta http-equiv="refresh" content="300" />-->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <title>Player {{name}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
     <style>
+        body {
+            background: url('static/backgrounds/cats-bg.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+        }
+        .navbar {
+            background: rgba(34, 34, 34, 0.85) !important;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 16px rgba(31, 38, 135, 0.37);
+            margin-bottom: 20px;
+        }
+        .navbar-nav .nav-item {
+            color: #ffd700;
+            font-size: 1.3rem;
+            font-family: 'Luckiest Guy', cursive;
+        }
+        #waiting {
+            font-size: 1.5rem;
+            color: #ffd700;
+            text-align: center;
+            margin-top: 40px;
+        }
         .img-container {
-          position: relative;
-          width:500;
-          max-width:500;
+            position: relative;
+            max-width: 100%;
+            margin: 0 auto 30px auto;
         }
-
-        .bottomright {
-          position: absolute;
-          bottom: 5px;
-          left:230px;
-          font-size: 16px;
-          border: 2px solid maroon;
-          border-radius: 5px;
-          background: papayawhip;
-          padding: 2px;
-        }
-
         .qimage {
-          height: 300;
-          width: auto;
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            background: #222;
+            padding: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+        .bottomright {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.3rem;
+            border: 2px solid #ff9800;
+            border-radius: 8px;
+            background: rgba(255, 223, 186, 0.95);
+            color: #222;
+            padding: 8px 20px;
+            font-weight: bold;
+            min-width: 120px;
+            text-align: center;
+        }
+        #choices {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            align-items: center;
+            margin: 30px auto 0 auto;
+            width: 100%;
+            max-width: 400px;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #ff9800 0%, #ff5e62 100%);
+            border: none;
+            border-radius: 14px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            padding: 18px 0;
+            width: 100%;
+            box-shadow: 0 2px 8px #222;
+            transition: transform 0.2s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px #ffd700;
+        }
+        @media (max-width: 600px) {
+            .navbar-nav .nav-item {
+                font-size: 1.1rem;
+            }
+            .qimage {
+                max-width: 98vw;
+            }
+            #choices {
+                max-width: 98vw;
+            }
+            .bottomright {
+                font-size: 1.1rem;
+                padding: 6px 10px;
+            }
         }
     </style>
     <script type="text/javascript">
@@ -40,58 +114,47 @@
         });
 
         socket.on('new_question', function(data){
-
             document.getElementById('qimage').src = "/static/movies/" + data['image'] + ".png";
             document.getElementById('choices').innerHTML = "";
-            console.log('new question');
-
             document.getElementById('waiting').style.display = "none";
             document.getElementById('question_main').style.display = "";
-
             for(var i in data['choices']){
                 c = data['choices'][i];
                 document.getElementById('choices').innerHTML +=
-                    '<a href="/choose/{{name}}/' + c + '"><button class="btn btn-primary" onclick="sendMessage()">' + c + '</button></a>&nbsp;';
+                    '<a href="/choose/{{name}}/' + c + '"><button class="btn btn-primary">' + c + '</button></a>';
             }
-
-
         });
     </script>
-    <title>Player {{name}}</title>
 </head>
 <body>
-    <nav class="navbar navbar-expand-sm bg-light">
-
+    <nav class="navbar navbar-expand-sm">
       <div class="container-fluid">
-        <!-- Links -->
         <ul class="navbar-nav">
           <li class="nav-item">
-            <b>{{name}}</b>
+            <i class="fa-solid fa-user"></i> <b>{{name}}</b>
           </li>
           <li class="nav-item">
-             &nbsp;| Your Score <b>{{score}}</b>
+             &nbsp;| <i class="fa-solid fa-star"></i> Score <b>{{score}}</b>
           </li>
-            {% if choix|length > 1 %}
+          {% if choix|length > 1 %}
           <li class="nav-item">
-            &nbsp;| Question value {{qscore}}
+            &nbsp;| <i class="fa-solid fa-coins"></i> Question value {{qscore}}
           </li>
-            {% endif %}
+          {% endif %}
         </ul>
       </div>
-
     </nav>
-        <div id="waiting" {% if img != "" %} style="display:none;" {%endif%}>
-            <span>Waiting for other players ...</span> <div class="spinner-border" role="status"></div>
+    <div id="waiting" {% if img != "" %} style="display:none;" {%endif%}>
+        <span>En attente des autres joueurs...</span> <div class="spinner-border" role="status"></div>
+    </div>
+    <div id='question_main' class="mx-auto justify-content-center" {% if img == "" %} style="display:none;" {%endif%}>
+        <div class="img-container">
+            <img class="qimage" id="qimage" src="/static/movies/{{img}}.png" alt="Question" />
+            <div class="bottomright" id="score">{{qscore}} points</div>
         </div>
-    <div  id='question_main' class="mx-auto justify-content-center" {% if img == "" %} style="display:none;" {%endif%}>
-        <div class="mx-auto justify-content-center img-container">
-                <img  class="qimage" id="qimage" src="/static/movies/{{img}}.png" height="300" /><br>
-                <div class="bottomright" id="score">{{qscore}} points</div>
-        </div>
-
-        <div id="choices" style = 'max-width: 300px;'>
+        <div id="choices">
         {% for c in choix %}
-           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary btn-lg btn-block" onclick="sendMessage()">{{c}}</button></a>
+           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary">{{c}}</button></a>
         {% endfor %}
         </div>
     </div>
