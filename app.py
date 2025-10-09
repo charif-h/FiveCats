@@ -106,6 +106,11 @@ def choose(token, answer):
 def handle_connect():
     print('Client connected')
 
+@socketio.on('start_game')
+def handle_start_game():
+    # Envoie le signal de démarrage à tous les clients
+    socketio.emit('countdown', {'seconds': 3}, broadcast=True)
+
 @socketio.on('message')
 def handle_message(message):
     print('Received message:', message)
