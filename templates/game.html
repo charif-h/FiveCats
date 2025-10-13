@@ -115,6 +115,15 @@
             distance = 30;
         });
 
+        socket.on('game_state_changed', function(data){
+            document.getElementById('game_state_display').innerHTML = data['state'];
+        });
+
+        // Changer l'état du jeu à 'in_progress' après 5 secondes
+        setTimeout(function() {
+            socket.emit('change_game_state', {'state': 'in_progress'});
+        }, 5000);
+
         var x = setInterval(function() {
           document.getElementById("prog-timer").innerHTML = distance + "s ";
           document.getElementById("prog-timer").setAttribute('aria-valuenow', distance);
@@ -156,6 +165,9 @@
     <div class="row">
         <div class="col-md-4">
             <h1><i class="fa-solid fa-cat"></i> Joueurs</h1>
+            <div class="alert alert-info text-center mb-3">
+                <i class="fa-solid fa-info-circle"></i> État du jeu: <strong id="game_state_display">{{ game_state }}</strong>
+            </div>
             <table class="table table-striped">
                 <thead>
                   <tr>

@@ -12,18 +12,20 @@ imgs = []
 choices = 10
 Timer = choices*6
 total = 0
+game_state = 'waiting'
 
 
 @app.route('/')
 def hello():
     global question
     global imgs
+    global game_state
     imgs = os.listdir('static/movies')
     imgs = [img[:-4] for img in imgs]
 
     #question = Question(imgs, players, choices)
     #print(question)
-    return render_template('index.html', players = players_to_table())
+    return render_template('index.html', players = players_to_table(), game_state = game_state)
 
 @app.route('/game', methods=['POST', 'GET'])
 def session():
@@ -31,6 +33,7 @@ def session():
     global choices
     global Timer
     global total
+    global game_state
     choices = int(request.form['choices'])
     Timer = int(request.form['Timer'])
     total = int(request.form['total'])
@@ -43,10 +46,11 @@ def session():
         scores.append([p.name, p.score])
 
     newQuestion()
-    return render_template('game.html', players=players_to_table(), img=question.image)
+    return render_template('game.html', players=players_to_table(), img=question.image, game_state=game_state)
 
 @app.route('/addplayer', methods=['POST'])
 def addplayer():
+    global game_state
     name = request.form.get('player_name', '').strip()
     error = None
     if not name:
@@ -54,7 +58,7 @@ def addplayer():
     elif any(p.name == name for p in players):
         error = f"Le joueur '{name}' existe déjà."
     if error:
-        return render_template('index.html', players=players_to_table(), error=error)
+        return render_template('index.html', players=players_to_table(), error=error, game_state=game_state)
     players.append(Player(name))
     return redirect('/')
 
@@ -68,6 +72,7 @@ def deleteplayer():
 @app.route('/player/<token>', methods=['POST', 'GET'])
 def player(token):
     global question
+    global game_state
     s = "Hello "
     player = None
     for p in players:
@@ -87,7 +92,7 @@ def player(token):
 
     return render_template('player.html', name=player.name,
                            score=player.score, choix=pq_choix,
-                           img=pq_image, qscore = pq_value)
+                           img=pq_image, qscore = pq_value, game_state=game_state)
 
 @app.route('/choose/<token>/<answer>', methods=['POST', 'GET'])
 def choose(token, answer):
@@ -123,6 +128,15 @@ def handle_timeout():
     print(question)
     socketio.emit('time_out')
     socketio.emit('update_score', players_to_table(False))
+
+@socketio.on('change_game_state')
+def handle_change_game_state(data):
+    global game_state
+    new_state = data.get('state', 'waiting')
+    game_state = new_state
+    print(f'Game state changed to: {game_state}')
+    # Émettre le changement d'état à tous les clients connectés
+    socketio.emit('game_state_changed', {'state': game_state})
 
 
 def players_to_table(with_token = True):
