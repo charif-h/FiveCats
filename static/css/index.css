@@ -1,0 +1,109 @@
+body {
+    background: url('../backgrounds/cats-bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+}
+.container {
+    background: rgba(34, 34, 34, 0.85);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+h1 {
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+    color: #ffd700;
+    text-shadow: 2px 2px 8px #222;
+}
+.btn-primary {
+    background: linear-gradient(90deg, #ff9800 0%, #ff5e62 100%);
+    border: none;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    transition: transform 0.2s;
+}
+.btn-primary:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 10px #ffd700;
+}
+table {
+    background: rgba(0,0,0,0.5);
+    border-radius: 10px;
+}
+th, td {
+    color: #fff;
+    vertical-align: middle;
+}
+.fa-cat {
+    color: #ff9800;
+    margin-right: 10px;
+}
+#logo {
+    width: 320px;
+    height: auto;
+    margin-bottom: 20px;
+}
+/* Ajout pour le QR code */
+.qr-bg {
+    background: #fff;
+    border-radius: 8px;
+    padding: 6px;
+    border: 2px solid #ffd700;
+    display: inline-block;
+}
+.qr-bg img {
+    width: 40px;
+}
+.logo-container {
+    flex-shrink: 0;
+}
+.options-container {
+    flex-grow: 1;
+}
+.options-title {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+.form-row {
+    font-size: 1rem;
+}
+.form-input {
+    font-size: 1rem;
+    height: 32px;
+}
+.choices-input {
+    width: 3em;
+}
+.start-button {
+    font-size: 1rem;
+    padding: 6px 18px;
+}
+.delete-form {
+    display: inline;
+}
+#playerCard {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 260px;
+    z-index: 9999;
+}
+#cardPlayerName {
+    font-weight: bold;
+}
+#cardPlayerQR {
+    width: 120px;
+}
+#cardOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+}

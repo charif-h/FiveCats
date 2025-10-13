@@ -1,0 +1,96 @@
+body {
+    background: url('../backgrounds/cats-bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+}
+.navbar {
+    background: rgba(34, 34, 34, 0.85) !important;
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 4px 16px rgba(31, 38, 135, 0.37);
+    margin-bottom: 20px;
+}
+.navbar-nav .nav-item {
+    color: #ffd700;
+    font-size: 1.3rem;
+    font-family: 'Luckiest Guy', cursive;
+}
+#waiting {
+    font-size: 1.5rem;
+    color: #ffd700;
+    text-align: center;
+    margin-top: 40px;
+}
+.img-container {
+    position: relative;
+    max-width: 100%;
+    margin: 0 auto 30px auto;
+}
+.qimage {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    border-radius: 15px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    background: #222;
+    padding: 10px;
+    display: block;
+    margin: 0 auto;
+}
+.bottomright {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.3rem;
+    border: 2px solid #ff9800;
+    border-radius: 8px;
+    background: rgba(255, 223, 186, 0.95);
+    color: #222;
+    padding: 8px 20px;
+    font-weight: bold;
+    min-width: 120px;
+    text-align: center;
+}
+#choices {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+    margin: 30px auto 0 auto;
+    width: 100%;
+    max-width: 400px;
+}
+.btn-primary {
+    background: linear-gradient(90deg, #ff9800 0%, #ff5e62 100%);
+    border: none;
+    border-radius: 14px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    padding: 18px 0;
+    width: 100%;
+    box-shadow: 0 2px 8px #222;
+    transition: transform 0.2s;
+}
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px #ffd700;
+}
+@media (max-width: 600px) {
+    .navbar-nav .nav-item {
+        font-size: 1.1rem;
+    }
+    .qimage {
+        max-width: 98vw;
+    }
+    #choices {
+        max-width: 98vw;
+    }
+    .bottomright {
+        font-size: 1.1rem;
+        padding: 6px 10px;
+    }
+}
+.hidden {
+    display: none;
+}
