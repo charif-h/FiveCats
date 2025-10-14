@@ -35,6 +35,17 @@
             transform: scale(1.08);
             box-shadow: 0 0 10px #ffd700;
         }
+        .btn-danger {
+            background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+        .btn-danger:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 10px #dc3545;
+        }
         table {
             background: rgba(0,0,0,0.5);
             border-radius: 10px;
@@ -91,6 +102,10 @@
                 <br>
                 <button type="submit" name="start" value="start" class="btn btn-primary mt-2" style="font-size:1rem; padding:6px 18px;" {% if players|length == 0 %} disabled {%endif%}>
                     <i class="fa-solid fa-play"></i> Go
+                </button>
+                <!-- Bouton visible temporairement pour test - normalement affiché seulement si game_state in ['loading', 'in_progress', 'paused'] -->
+                <button type="button" class="btn btn-danger mt-2 ms-2" style="font-size:1rem; padding:6px 18px;" onclick="terminateGame()">
+                    <i class="fa-solid fa-stop"></i> Terminer le jeu
                 </button>
             </form>
         </div>
@@ -183,6 +198,19 @@
     const btn = document.querySelector('button[name="addp"]');
     btn.disabled = this.value.trim() === '';
 });
+
+  // Fonction pour terminer le jeu avec confirmation
+  function terminateGame() {
+    if (confirm('Êtes-vous sûr de vouloir terminer le jeu en cours ? Cette action est irréversible.')) {
+      // Créer un formulaire invisible pour envoyer la requête POST
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/terminate_game';
+      form.style.display = 'none';
+      document.body.appendChild(form);
+      form.submit();
+    }
+  }
 </script>
 </body>
 </html>

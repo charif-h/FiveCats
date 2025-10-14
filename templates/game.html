@@ -129,9 +129,15 @@
         var answer_image = '{{img}}';
         var timerInterval;
         var isPaused = false;
+        var isShowingExpired = false;
 
         socket.on('connect', function () {
             console.log('Connected to the server');
+            // Si l'état initial est 'loading', démarrer le compte à rebours
+            if ('{{game_state}}' === 'loading') {
+                updateInterface('loading');
+                startCountdown();
+            }
         });
 
         socket.on('update_score', function (data) {
@@ -145,10 +151,19 @@
         socket.on('new_question', function(data){
             document.getElementById('qimage').src = "/static/movies/" + data['image'] + ".png";
             answer_image = data['image'];
-            distance = 30;
-            // Redémarrer le timer pour la nouvelle question
-            if (!isPaused) {
-                startQuestionTimer();
+            
+            // Ne pas redémarrer le timer si on affiche encore le message EXPIRED
+            if (!isShowingExpired) {
+                distance = 30;
+                // Redémarrer le timer pour la nouvelle question seulement si en mode in_progress
+                var currentState = document.getElementById('game_state_display').innerHTML;
+                if (!isPaused && currentState === 'in_progress') {
+                    startQuestionTimer();
+                }
+            } else {
+                // Si on reçoit une nouvelle question pendant l'affichage EXPIRED,
+                // juste mettre à jour l'image mais garder le timer d'expiration
+                console.log('New question received during EXPIRED display - updating image only');
             }
         });
 
@@ -239,11 +254,18 @@
                 pauseTimer();
                 applyPausedEffect();
                 socket.emit('game_paused');
-            } else if (state === 'in_progress' && isPaused) {
-                isPaused = false;
-                resumeTimer();
-                removePausedEffect();
-                socket.emit('game_resumed');
+            } else if (state === 'in_progress') {
+                if (isPaused) {
+                    // Reprendre après une pause
+                    isPaused = false;
+                    resumeTimer();
+                    removePausedEffect();
+                    socket.emit('game_resumed');
+                } else {
+                    // Premier passage à in_progress - démarrer le timer
+                    isPaused = false;
+                    startQuestionTimer();
+                }
             }
         }
 
@@ -294,8 +316,7 @@
             }
         });
 
-        // Changer immédiatement l'état à 'loading' au chargement de la page
-        socket.emit('change_game_state', {'state': 'loading'});
+        // L'état initial est déjà 'loading', pas besoin de l'émettre à nouveau
 
         function startCountdown() {
             // Éviter de démarrer plusieurs comptes à rebours
@@ -378,6 +399,7 @@
                     socket.emit('time_out');
                 }
                 if (distance < 0) {
+                    isShowingExpired = true;
                     document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-info');
                     document.getElementById("prog-timer").setAttribute('aria-valuenow', 6 + distance);
                     document.getElementById("prog-timer").setAttribute('style', 'width:'+Number(100*(6 + distance)/5)+'%');
@@ -388,33 +410,45 @@
                     document.getElementById("qimage").classList.add("expired-image");
                 }
 
-                if (distance < -4) {
+                if (distance < -5) {
                     clearInterval(timerInterval);
-                    // Réinitialiser les styles avant le rechargement
+                    isShowingExpired = false;
+                    // Réinitialiser les styles après avoir affiché la réponse pendant 5 secondes
                     document.getElementById("expired-text").style.display = "none";
                     document.getElementById("qimage").classList.remove("expired-image");
-                    location.reload();
-                    document.getElementById("prog-timer").innerHTML = "NEW QUESTION";
+                    
+                    // Attendre la nouvelle question du serveur
+                    document.getElementById("prog-timer").innerHTML = "NOUVELLE QUESTION...";
+                    
+                    // Réinitialiser le timer pour la prochaine question
+                    distance = 30;
+                    
+                    // Si une nouvelle question est en attente, la démarrer maintenant
+                    setTimeout(function() {
+                        var currentState = document.getElementById('game_state_display').innerHTML;
+                        if (!isPaused && currentState === 'in_progress') {
+                            startQuestionTimer();
+                        }
+                    }, 1000);
                 }
                 distance -= 1;
             }, 1000);
         }
 
-        // Démarrer le timer de question au chargement
-        startQuestionTimer();
+        // Le timer de question sera démarré quand l'état passera à 'in_progress'
     </script>
 </head>
 <body>
 <div class="game-container">
     <!-- Écran de compte à rebours -->
-    <div id="countdown_screen" class="text-center" style="display: none;">
+    <div id="countdown_screen" class="text-center" {% if game_state == 'loading' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
         <h1 class="mb-4"><i class="fa-solid fa-clock"></i> Le jeu commence dans...</h1>
         <div id="countdown_number" class="display-1 text-warning mb-4" style="font-size: 8rem; font-weight: bold; text-shadow: 3px 3px 6px #000;">5</div>
         <p class="lead">Préparez-vous !</p>
     </div>
 
     <!-- Interface principale du jeu -->
-    <div id="game_interface" class="row">
+    <div id="game_interface" class="row" {% if game_state == 'loading' %}style="display: none;"{% endif %}>
         <div class="col-md-4">
             <h1><i class="fa-solid fa-cat"></i> Joueurs</h1>
             <div class="alert alert-info text-center mb-3">

@@ -34,6 +34,7 @@ def session():
     global Timer
     global total
     global game_state
+    game_state = 'loading'
     choices = int(request.form['choices'])
     Timer = int(request.form['Timer'])
     total = int(request.form['total'])
@@ -67,6 +68,25 @@ def deleteplayer():
     name = request.form.get('player_name')
     global players
     players = [p for p in players if p.name != name]
+    return redirect('/')
+
+@app.route('/terminate_game', methods=['POST'])
+def terminate_game():
+    global game_state, question
+    if game_state in ['loading', 'in_progress', 'paused']:
+        # Terminer le jeu en cours
+        socketio.emit('end_game', {
+            'reason': 'manual',
+            'final_scores': players_to_table(False),
+            'winner': get_winner() if players else None,
+            'message': 'Le jeu a été terminé manuellement par l\'administrateur.'
+        })
+        game_state = 'waiting'  # Revenir à l'état d'attente
+        # Nettoyer la question active
+        if 'question' in globals():
+            del question
+        # Émettre le changement d'état
+        socketio.emit('game_state_changed', {'state': game_state})
     return redirect('/')
 
 @app.route('/player/<token>', methods=['POST', 'GET'])
@@ -158,6 +178,19 @@ def handle_timeout():
     print(question)
     socketio.emit('time_out')
     socketio.emit('update_score', players_to_table(False))
+    
+    # Vérifier si la question est devenue inactive après le timeout
+    if not question.active:
+        print('Question expired - will generate new question in 5 seconds')
+        # Utiliser start_background_task avec le contexte d'application
+        socketio.start_background_task(delayed_new_question)
+
+def delayed_new_question():
+    import time
+    with app.app_context():  # Créer un contexte d'application Flask
+        time.sleep(5)  # Attendre 5 secondes
+        print('Generating new question after EXPIRED delay')
+        newQuestion()
 
 @socketio.on('change_game_state')
 def handle_change_game_state(data):
