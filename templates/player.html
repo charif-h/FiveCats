@@ -236,6 +236,70 @@
             removePlayerPausedEffect();
         });
 
+        socket.on('game_finished', function(data){
+            showPlayerGameFinishedScreen(data);
+        });
+
+        socket.on('game_reset', function(){
+            location.reload();
+        });
+
+        function showPlayerGameFinishedScreen(data) {
+            // Masquer toutes les interfaces
+            document.getElementById('countdown_screen').style.display = 'none';
+            document.getElementById('waiting').style.display = 'none';
+            document.getElementById('question_main').style.display = 'none';
+            
+            // Créer l'écran de fin pour le joueur
+            var finishScreen = document.createElement('div');
+            finishScreen.id = 'player_finish_screen';
+            finishScreen.className = 'text-center';
+            finishScreen.style.marginTop = '30px';
+            
+            var playerScore = data.final_scores.find(score => score[0] === '{{name}}');
+            var playerRank = data.final_scores.findIndex(score => score[0] === '{{name}}') + 1;
+            var isWinner = data.winner && data.winner.name === '{{name}}';
+            
+            finishScreen.innerHTML = `
+                <h1 class="mb-4" style="color: #ffd700;">
+                    <i class="fa-solid fa-flag-checkered"></i> Jeu Terminé !
+                </h1>
+                ${isWinner ? `
+                    <h2 class="mb-4" style="color: #4CAF50;">
+                        🏆 Félicitations ! Vous avez gagné !
+                    </h2>
+                ` : `
+                    <h3 class="mb-3" style="color: #fff;">
+                        Vous êtes ${playerRank}${playerRank === 1 ? 'er' : 'ème'} !
+                    </h3>
+                `}
+                <div class="alert alert-info mb-4">
+                    <h4>Votre score final: ${playerScore ? playerScore[1] : 0} points</h4>
+                </div>
+                <p class="lead mb-4" style="color: #fff;">${data.message}</p>
+                <div class="mb-4">
+                    <h4 style="color: #ffd700;">Classement final:</h4>
+                    <div style="max-width: 300px; margin: 0 auto;">
+                        ${data.final_scores.slice(0, 3).map((score, index) => `
+                            <div class="alert ${score[0] === '{{name}}' ? 'alert-warning' : 'alert-secondary'} p-2 mb-2">
+                                ${index + 1}. ${score[0]} - ${score[1]} pts
+                                ${index === 0 ? ' 🏆' : index === 1 ? ' 🥈' : index === 2 ? ' 🥉' : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-lg" onclick="goToHome()">
+                    <i class="fa-solid fa-home"></i> Retour à l'accueil
+                </button>
+            `;
+            
+            document.body.appendChild(finishScreen);
+        }
+
+        function goToHome() {
+            window.location.href = '/';
+        }
+
         socket.on('answer_feedback', function(data){
             // Vérifier si la notification est pour ce joueur
             if (data.player === '{{name}}') {

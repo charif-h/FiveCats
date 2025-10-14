@@ -192,6 +192,67 @@ def handle_game_resumed():
     print('Game resumed - notifying all players')
     socketio.emit('game_resumed')
 
+@socketio.on('end_game')
+def handle_end_game(data=None):
+    global game_state
+    reason = data.get('reason', 'manual') if data else 'manual'
+    game_state = 'finished'
+    
+    final_scores = players_to_table(False)
+    winner = get_winner() if players else None
+    
+    print(f'Game ended - Reason: {reason}')
+    socketio.emit('game_finished', {
+        'reason': reason,
+        'final_scores': final_scores,
+        'winner': winner,
+        'message': get_end_game_message(reason, winner)
+    })
+
+def get_winner():
+    if not players:
+        return None
+    sorted_players = sorted(players, key=lambda x: x.score, reverse=True)
+    return {
+        'name': sorted_players[0].name,
+        'score': sorted_players[0].score
+    }
+
+def get_end_game_message(reason, winner):
+    messages = {
+        'manual': 'Le jeu a été terminé manuellement.',
+        'no_more_images': 'Toutes les images ont été utilisées !',
+        'time_limit': 'Le temps limite du jeu a été atteint.',
+        'target_reached': f'{winner["name"] if winner else "Un joueur"} a atteint le score cible !'
+    }
+    return messages.get(reason, 'Le jeu est terminé.')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+    # Optionnel: retirer le joueur de la liste si nécessaire
+
+@socketio.on('reset_game')
+def handle_reset_game():
+    global game_state, players, imgs, question
+    game_state = 'waiting'
+    
+    # Réinitialiser les scores des joueurs
+    for player in players:
+        player.score = 0
+    
+    # Recharger les images
+    imgs = os.listdir('static/movies')
+    imgs = [img[:-4] for img in imgs]
+    
+    # Réinitialiser la question
+    if 'question' in globals():
+        del question
+    
+    print('Game reset')
+    socketio.emit('game_reset')
+    socketio.emit('game_state_changed', {'state': game_state})
+
 
 def players_to_table(with_token = True):
     tbl = []
@@ -204,7 +265,14 @@ def players_to_table(with_token = True):
     return tbl
 
 def newQuestion():
-    global question
+    global question, game_state
+    
+    # Vérifier s'il reste des images
+    if len(imgs) == 0:
+        print('No more images available - ending game')
+        socketio.emit('end_game', {'reason': 'no_more_images'})
+        return
+    
     question = Question(imgs, players, choices)
     imgs.remove(question.image)
     print(question.choices_to_json())
