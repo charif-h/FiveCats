@@ -155,6 +155,16 @@ def handle_countdown_update(data):
     # Diffuser la mise à jour du compte à rebours à tous les clients
     socketio.emit('countdown_update', {'count': count})
 
+@socketio.on('game_paused')
+def handle_game_paused():
+    print('Game paused - notifying all players')
+    socketio.emit('game_paused')
+
+@socketio.on('game_resumed')
+def handle_game_resumed():
+    print('Game resumed - notifying all players')
+    socketio.emit('game_resumed')
+
 
 def players_to_table(with_token = True):
     tbl = []

@@ -101,6 +101,35 @@
                 padding: 6px 10px;
             }
         }
+        .paused-image {
+            filter: blur(10px);
+            opacity: 0.3;
+            transition: all 0.5s ease;
+        }
+        .paused-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            text-shadow: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-primary:disabled:hover {
+            transform: none !important;
+            box-shadow: 0 2px 8px #222 !important;
+        }
     </style>
     <script type="text/javascript">
         var socket = io.connect('http://' + document.domain + ':' + location.port);
@@ -132,6 +161,59 @@
             document.getElementById('player_game_state').innerHTML = data['state'];
             updatePlayerInterface(data['state']);
         });
+
+        socket.on('game_paused', function(){
+            applyPlayerPausedEffect();
+        });
+
+        socket.on('game_resumed', function(){
+            removePlayerPausedEffect();
+        });
+
+        function applyPlayerPausedEffect() {
+            var image = document.getElementById('qimage');
+            if (image) {
+                image.classList.add('paused-image');
+                
+                // Ajouter overlay de pause
+                var container = image.parentElement;
+                if (!document.getElementById('player-pause-overlay')) {
+                    var overlay = document.createElement('div');
+                    overlay.id = 'player-pause-overlay';
+                    overlay.className = 'paused-overlay';
+                    overlay.innerHTML = '<i class="fa-solid fa-pause"></i> JEU EN PAUSE';
+                    container.style.position = 'relative';
+                    container.appendChild(overlay);
+                }
+            }
+            
+            // Désactiver tous les boutons de choix
+            var buttons = document.querySelectorAll('#choices .btn-primary');
+            buttons.forEach(function(button) {
+                button.disabled = true;
+                button.style.pointerEvents = 'none';
+            });
+        }
+
+        function removePlayerPausedEffect() {
+            var image = document.getElementById('qimage');
+            if (image) {
+                image.classList.remove('paused-image');
+                
+                // Supprimer overlay de pause
+                var overlay = document.getElementById('player-pause-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+            
+            // Réactiver tous les boutons de choix
+            var buttons = document.querySelectorAll('#choices .btn-primary');
+            buttons.forEach(function(button) {
+                button.disabled = false;
+                button.style.pointerEvents = 'auto';
+            });
+        }
 
         socket.on('countdown_update', function(data){
             if (document.getElementById('countdown_number')) {

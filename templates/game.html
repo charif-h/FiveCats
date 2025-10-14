@@ -101,12 +101,34 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0,0,0,0.4);
         }
+        .paused-image {
+            filter: blur(10px);
+            opacity: 0.3;
+            transition: all 0.5s ease;
+        }
+        .paused-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            text-shadow: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
     <script type="text/javascript">
         var socket = io.connect('http://' + document.domain + ':' + location.port);
         var distance = 30;
         var answer_image = '{{img}}';
+        var timerInterval;
+        var isPaused = false;
 
         socket.on('connect', function () {
             console.log('Connected to the server');
@@ -124,6 +146,10 @@
             document.getElementById('qimage').src = "/static/movies/" + data['image'] + ".png";
             answer_image = data['image'];
             distance = 30;
+            // Redémarrer le timer pour la nouvelle question
+            if (!isPaused) {
+                startQuestionTimer();
+            }
         });
 
         var countdownInterval;
@@ -132,12 +158,68 @@
             document.getElementById('game_state_display').innerHTML = data['state'];
             updatePauseButton(data['state']);
             updateInterface(data['state']);
+            handleGameStateChange(data['state']);
             
             // Démarrer le compte à rebours si l'état passe à 'loading'
             if (data['state'] === 'loading') {
                 startCountdown();
             }
         });
+
+        function handleGameStateChange(state) {
+            if (state === 'paused') {
+                isPaused = true;
+                pauseTimer();
+                applyPausedEffect();
+                socket.emit('game_paused');
+            } else if (state === 'in_progress' && isPaused) {
+                isPaused = false;
+                resumeTimer();
+                removePausedEffect();
+                socket.emit('game_resumed');
+            }
+        }
+
+        function pauseTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        }
+
+        function resumeTimer() {
+            startQuestionTimer();
+        }
+
+        function applyPausedEffect() {
+            var image = document.getElementById('qimage');
+            if (image) {
+                image.classList.add('paused-image');
+                
+                // Ajouter overlay de pause
+                var container = image.parentElement;
+                if (!document.getElementById('pause-overlay')) {
+                    var overlay = document.createElement('div');
+                    overlay.id = 'pause-overlay';
+                    overlay.className = 'paused-overlay';
+                    overlay.innerHTML = '<i class="fa-solid fa-pause"></i> JEU EN PAUSE';
+                    container.style.position = 'relative';
+                    container.appendChild(overlay);
+                }
+            }
+        }
+
+        function removePausedEffect() {
+            var image = document.getElementById('qimage');
+            if (image) {
+                image.classList.remove('paused-image');
+                
+                // Supprimer overlay de pause
+                var overlay = document.getElementById('pause-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+        }
 
         socket.on('countdown_update', function(data){
             if (document.getElementById('countdown_number')) {
@@ -207,40 +289,52 @@
             }
         }
 
-        var x = setInterval(function() {
-          document.getElementById("prog-timer").innerHTML = distance + "s ";
-          document.getElementById("prog-timer").setAttribute('aria-valuenow', distance);
-          document.getElementById("prog-timer").setAttribute('style', 'width:'+Number(100*distance/30)+'%');
-          document.getElementById("prog-timer").setAttribute('class', 'progress-bar');
-
-          if (distance <= 5){
-            document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-danger');
-          }
-          if (distance == 0){
-            socket.emit('time_out');
-          }
-          if (distance < 0) {
-            //document.getElementById("prog-timer").innerHTML = "EXPIRED the answer is: <b>" + answer_image + "</b>";
-            document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-info');
-            document.getElementById("prog-timer").setAttribute('aria-valuenow', 6 + distance);
-            document.getElementById("prog-timer").setAttribute('style', 'width:'+Number(100*(6 + distance)/5)+'%');
+        function startQuestionTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
             
-            // Afficher le label EXPIRED et réduire l'opacité de l'image
-            document.getElementById("expired-text").innerHTML = "EXPIRED:<br> the answer is:<br> <b>" + answer_image + "</b>";
-            document.getElementById("expired-text").style.display = "block";
-            document.getElementById("qimage").classList.add("expired-image");
-          }
+            timerInterval = setInterval(function() {
+                if (isPaused) {
+                    return; // Ne pas décrémenter si en pause
+                }
+                
+                document.getElementById("prog-timer").innerHTML = distance + "s ";
+                document.getElementById("prog-timer").setAttribute('aria-valuenow', distance);
+                document.getElementById("prog-timer").setAttribute('style', 'width:'+Number(100*distance/30)+'%');
+                document.getElementById("prog-timer").setAttribute('class', 'progress-bar');
 
-          if (distance < -4) {
-            clearInterval(x);
-            // Réinitialiser les styles avant le rechargement
-            document.getElementById("expired-text").style.display = "none";
-            document.getElementById("qimage").classList.remove("expired-image");
-            location.reload();
-            document.getElementById("prog-timer").innerHTML = "NEW QUESTION";
-          }
-          distance -= 1;
-        }, 1000);
+                if (distance <= 5){
+                    document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-danger');
+                }
+                if (distance == 0){
+                    socket.emit('time_out');
+                }
+                if (distance < 0) {
+                    document.getElementById("prog-timer").setAttribute('class', 'progress-bar bg-info');
+                    document.getElementById("prog-timer").setAttribute('aria-valuenow', 6 + distance);
+                    document.getElementById("prog-timer").setAttribute('style', 'width:'+Number(100*(6 + distance)/5)+'%');
+                    
+                    // Afficher le label EXPIRED et réduire l'opacité de l'image
+                    document.getElementById("expired-text").innerHTML = "EXPIRED:<br> the answer is:<br> <b>" + answer_image + "</b>";
+                    document.getElementById("expired-text").style.display = "block";
+                    document.getElementById("qimage").classList.add("expired-image");
+                }
+
+                if (distance < -4) {
+                    clearInterval(timerInterval);
+                    // Réinitialiser les styles avant le rechargement
+                    document.getElementById("expired-text").style.display = "none";
+                    document.getElementById("qimage").classList.remove("expired-image");
+                    location.reload();
+                    document.getElementById("prog-timer").innerHTML = "NEW QUESTION";
+                }
+                distance -= 1;
+            }, 1000);
+        }
+
+        // Démarrer le timer de question au chargement
+        startQuestionTimer();
     </script>
 </head>
 <body>
