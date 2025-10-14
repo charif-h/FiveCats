@@ -109,7 +109,10 @@ def choose(token, answer):
 # Handler for a message recieved over 'connect' channel
 @socketio.on('connect')
 def handle_connect():
+    global game_state
     print('Client connected')
+    # Envoyer l'état actuel du jeu au nouveau client
+    socketio.emit('game_state_changed', {'state': game_state})
 
 @socketio.on('start_game')
 def handle_start_game():
@@ -132,11 +135,25 @@ def handle_timeout():
 @socketio.on('change_game_state')
 def handle_change_game_state(data):
     global game_state
+    global question
     new_state = data.get('state', 'waiting')
+    old_state = game_state
     game_state = new_state
-    print(f'Game state changed to: {game_state}')
+    print(f'Game state changed from {old_state} to: {game_state}')
+    
+    # Générer une nouvelle question quand on passe à in_progress depuis loading
+    if old_state == 'loading' and new_state == 'in_progress':
+        if len(imgs) > 0 and len(players) > 0:
+            newQuestion()
+    
     # Émettre le changement d'état à tous les clients connectés
     socketio.emit('game_state_changed', {'state': game_state})
+
+@socketio.on('countdown_update')
+def handle_countdown_update(data):
+    count = data.get('count', 0)
+    # Diffuser la mise à jour du compte à rebours à tous les clients
+    socketio.emit('countdown_update', {'count': count})
 
 
 def players_to_table(with_token = True):

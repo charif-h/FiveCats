@@ -107,6 +107,9 @@
 
         socket.on('connect', function () {
             console.log('Connected to the server');
+            // Initialiser l'interface selon l'état actuel du jeu
+            var currentState = '{{game_state}}';
+            updatePlayerInterface(currentState);
         });
 
         socket.on('time_out', function(){
@@ -127,7 +130,47 @@
 
         socket.on('game_state_changed', function(data){
             document.getElementById('player_game_state').innerHTML = data['state'];
+            updatePlayerInterface(data['state']);
         });
+
+        socket.on('countdown_update', function(data){
+            if (document.getElementById('countdown_number')) {
+                document.getElementById('countdown_number').innerHTML = data['count'];
+            }
+        });
+
+        function updatePlayerInterface(state) {
+            if (state === 'loading') {
+                document.getElementById('countdown_screen').style.display = 'block';
+                document.getElementById('waiting').style.display = 'none';
+                document.getElementById('question_main').style.display = 'none';
+            } else if (state === 'waiting') {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('waiting').style.display = 'block';
+                document.getElementById('question_main').style.display = 'none';
+            } else if (state === 'in_progress' || state === 'paused') {
+                document.getElementById('countdown_screen').style.display = 'none';
+                // Vérifier s'il y a une question active en regardant l'image et les choix
+                var questionImg = document.getElementById('qimage');
+                var choices = document.getElementById('choices');
+                var hasActiveQuestion = questionImg && questionImg.src && 
+                                      !questionImg.src.endsWith('/.png') && 
+                                      !questionImg.src.endsWith('/static/movies/.png') &&
+                                      choices && choices.children.length > 0;
+                
+                if (hasActiveQuestion || '{{img}}' !== '') {
+                    document.getElementById('waiting').style.display = 'none';
+                    document.getElementById('question_main').style.display = 'block';
+                } else {
+                    document.getElementById('waiting').style.display = 'block';
+                    document.getElementById('question_main').style.display = 'none';
+                }
+            } else {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('waiting').style.display = 'none';
+                document.getElementById('question_main').style.display = 'none';
+            }
+        }
     </script>
 </head>
 <body>
@@ -151,6 +194,14 @@
         </ul>
       </div>
     </nav>
+    
+    <!-- Écran de compte à rebours -->
+    <div id="countdown_screen" class="text-center" style="display: none; margin-top: 50px;">
+        <h1 class="mb-4" style="color: #ffd700;"><i class="fa-solid fa-clock"></i> Le jeu commence dans...</h1>
+        <div id="countdown_number" class="display-1 text-warning mb-4" style="font-size: 6rem; font-weight: bold; text-shadow: 3px 3px 6px #000;">5</div>
+        <p class="lead" style="color: #fff;">Préparez-vous {{name}} !</p>
+    </div>
+    
     <div id="waiting" {% if img != "" %} style="display:none;" {%endif%}>
         <span>En attente des autres joueurs...</span> <div class="spinner-border" role="status"></div>
     </div>

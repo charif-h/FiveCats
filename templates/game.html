@@ -126,18 +126,60 @@
             distance = 30;
         });
 
+        var countdownInterval;
+
         socket.on('game_state_changed', function(data){
             document.getElementById('game_state_display').innerHTML = data['state'];
             updatePauseButton(data['state']);
+            updateInterface(data['state']);
+            
+            // Démarrer le compte à rebours si l'état passe à 'loading'
+            if (data['state'] === 'loading') {
+                startCountdown();
+            }
+        });
+
+        socket.on('countdown_update', function(data){
+            if (document.getElementById('countdown_number')) {
+                document.getElementById('countdown_number').innerHTML = data['count'];
+            }
         });
 
         // Changer immédiatement l'état à 'loading' au chargement de la page
         socket.emit('change_game_state', {'state': 'loading'});
 
-        // Changer l'état du jeu à 'in_progress' après 5 secondes
-        setTimeout(function() {
-            socket.emit('change_game_state', {'state': 'in_progress'});
-        }, 5000);
+        function startCountdown() {
+            // Éviter de démarrer plusieurs comptes à rebours
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            var countdown = 5;
+            document.getElementById('countdown_number').innerHTML = countdown;
+            socket.emit('countdown_update', {'count': countdown});
+            
+            countdownInterval = setInterval(function() {
+                countdown--;
+                if (countdown > 0) {
+                    document.getElementById('countdown_number').innerHTML = countdown;
+                    socket.emit('countdown_update', {'count': countdown});
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    socket.emit('change_game_state', {'state': 'in_progress'});
+                }
+            }, 1000);
+        }
+
+        function updateInterface(state) {
+            if (state === 'loading') {
+                document.getElementById('countdown_screen').style.display = 'block';
+                document.getElementById('game_interface').style.display = 'none';
+            } else {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('game_interface').style.display = 'block';
+            }
+        }
 
         // Fonction pour basculer entre pause et continue
         function togglePause() {
@@ -203,7 +245,15 @@
 </head>
 <body>
 <div class="game-container">
-    <div class="row">
+    <!-- Écran de compte à rebours -->
+    <div id="countdown_screen" class="text-center" style="display: none;">
+        <h1 class="mb-4"><i class="fa-solid fa-clock"></i> Le jeu commence dans...</h1>
+        <div id="countdown_number" class="display-1 text-warning mb-4" style="font-size: 8rem; font-weight: bold; text-shadow: 3px 3px 6px #000;">5</div>
+        <p class="lead">Préparez-vous !</p>
+    </div>
+
+    <!-- Interface principale du jeu -->
+    <div id="game_interface" class="row">
         <div class="col-md-4">
             <h1><i class="fa-solid fa-cat"></i> Joueurs</h1>
             <div class="alert alert-info text-center mb-3">
@@ -241,7 +291,7 @@
                 <img id="qimage" src="/static/movies/{{img}}.png" alt="Question Image"/>
             </div>
         </div>
-    </div>
+    </div> <!-- fin game_interface -->
 </div>
 </body>
 </html>
