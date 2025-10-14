@@ -102,13 +102,14 @@ def player(token):
 
     pq_choix = ""
     pq_image = ""
-    pq_value = ""
-    if 'question' in globals():
+    pq_value = 0  # Valeur par défaut
+    if 'question' in globals() and question is not None:
         pq_choix = question.players_choices[token]
         pq_image = question.image
         pq_value = question.getQuestionValue(token)
-        print("question exists")
-
+        print(f"Question exists - {token} score: {pq_value}")
+    else:
+        print(f"No active question - {token} score: {pq_value}")
 
     return render_template('player.html', name=player.name,
                            score=player.score, choix=pq_choix,
@@ -137,6 +138,16 @@ def choose(token, answer):
         'type': message_type,
         'is_correct': is_correct,
         'points': points_earned
+    })
+    
+    # Calculer et envoyer les nouveaux scores pour tous les joueurs après chaque réponse
+    updated_scores = {}
+    for p in players:
+        updated_scores[p.name] = question.getQuestionValue(p.name)
+    
+    socketio.emit('score_update', {
+        'player_scores': updated_scores,
+        'global_score_id': question.score_id
     })
     
     socketio.emit('update_score', players_to_table(False))
@@ -309,7 +320,17 @@ def newQuestion():
     question = Question(imgs, players, choices)
     imgs.remove(question.image)
     print(question.choices_to_json())
-    socketio.emit('new_question', {'image': question.image, 'choices': question.choix})
+    
+    # Calculer les scores pour chaque joueur
+    player_scores = {}
+    for player in players:
+        player_scores[player.name] = question.getQuestionValue(player.name)
+    
+    socketio.emit('new_question', {
+        'image': question.image, 
+        'choices': question.choix,
+        'player_scores': player_scores
+    })
 
 
 if __name__ == '__main__':

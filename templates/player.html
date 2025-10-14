@@ -36,6 +36,10 @@
             position: relative;
             max-width: 100%;
             margin: 0 auto 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
         }
         .qimage {
             width: 100%;
@@ -46,7 +50,67 @@
             background: #222;
             padding: 8px;
             display: block;
-            margin: 0 auto;
+        }
+        .progress-container {
+            position: relative;
+            width: 20px;
+            height: 35vh;
+            min-height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 2px solid #ff9800;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .progress-bar-vertical {
+            width: 100%;
+            background: linear-gradient(180deg, #4CAF50 0%, #ff9800 50%, #f44336 100%);
+            border-radius: 8px;
+            transition: height 0.8s ease-in-out;
+            position: relative;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .progress-bar-vertical.updating {
+            animation: pulse 0.6s ease-in-out;
+        }
+        .progress-score-text {
+            position: absolute;
+            color: #fff;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            z-index: 10;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .progress-text {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .progress-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 0.8rem;
+            white-space: nowrap;
         }
         .bottomright {
             position: absolute;
@@ -103,6 +167,41 @@
         @media (max-width: 600px) {
             .navbar-nav .nav-item {
                 font-size: 1.1rem;
+            }
+            .img-container {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
+            .progress-container {
+                width: 80%;
+                height: 20px;
+                flex-direction: row;
+                justify-content: flex-start;
+                min-height: 20px;
+            }
+            .progress-bar-vertical {
+                height: 100% !important;
+                width: 0%;
+                transition: width 0.8s ease-in-out;
+                background: linear-gradient(90deg, #4CAF50 0%, #ff9800 50%, #f44336 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .progress-score-text {
+                font-size: 0.7rem;
+            }
+            .progress-text {
+                position: static;
+                transform: none;
+                margin-right: 10px;
+                order: -1;
+            }
+            .progress-label {
+                position: static;
+                transform: none;
+                margin-left: 10px;
             }
             .qimage {
                 max-width: 98vw;
@@ -205,7 +304,49 @@
             // Initialiser l'interface selon l'état actuel du jeu
             var currentState = '{{game_state}}';
             updatePlayerInterface(currentState);
+            // Initialiser la barre de progression
+            console.log('Initial qscore for {{name}}:', '{{qscore}}');
+            updateProgressBar();
         });
+
+        function updateProgressBar() {
+            var progressBar = document.getElementById('progress-bar');
+            var progressText = document.getElementById('progress-text');
+            var progressScoreDisplay = document.getElementById('progress-score-display');
+            if (progressBar) {
+                var score = parseInt(progressBar.getAttribute('data-score'));
+                if (isNaN(score)) {
+                    score = 0; // Valeur par défaut si pas de score
+                }
+                var maxScore = 55; // Score maximum possible
+                var percentage = Math.min((score / maxScore) * 100, 100);
+                
+                console.log('Progress bar update - Score:', score, 'Percentage:', percentage);
+                
+                // Ajouter animation de mise à jour
+                progressBar.classList.add('updating');
+                setTimeout(function() {
+                    progressBar.classList.remove('updating');
+                }, 600);
+                
+                // Vérifier si on est sur mobile (largeur < 600px)
+                if (window.innerWidth <= 600) {
+                    progressBar.style.width = percentage + '%';
+                    progressBar.style.height = '100%';
+                } else {
+                    progressBar.style.height = percentage + '%';
+                    progressBar.style.width = '100%';
+                }
+                
+                // Mettre à jour tous les textes de score
+                if (progressText) {
+                    progressText.textContent = score + ' pts';
+                }
+                if (progressScoreDisplay) {
+                    progressScoreDisplay.textContent = score;
+                }
+            }
+        }
 
         socket.on('time_out', function(){
             location.reload();
@@ -221,6 +362,39 @@
                 document.getElementById('choices').innerHTML +=
                     '<button class="btn btn-primary" onclick="submitAnswer(\'' + c + '\', this)">' + c + '</button>';
             }
+            // Mettre à jour la barre de progression avec le score du joueur actuel
+            if (data['player_scores'] && data['player_scores']['{{name}}'] !== undefined) {
+                var playerScore = data['player_scores']['{{name}}'];
+                var progressBar = document.getElementById('progress-bar');
+                var progressText = document.getElementById('progress-text');
+                var scoreElement = document.getElementById('score');
+                var debugQScore = document.getElementById('debug_qscore');
+                var progressScoreDisplay = document.getElementById('progress-score-display');
+                
+                console.log('Updating score for {{name}}:', playerScore);
+                
+                if (progressBar) {
+                    progressBar.setAttribute('data-score', playerScore);
+                    updateProgressBar();
+                }
+                if (progressText) {
+                    progressText.textContent = playerScore + ' pts';
+                }
+                if (scoreElement) {
+                    scoreElement.textContent = playerScore + ' points';
+                }
+                if (debugQScore) {
+                    debugQScore.textContent = playerScore;
+                }
+                if (progressScoreDisplay) {
+                    progressScoreDisplay.textContent = playerScore;
+                }
+            }
+        });
+
+        // Mettre à jour la barre de progression lors du redimensionnement de la fenêtre
+        window.addEventListener('resize', function() {
+            updateProgressBar();
         });
 
         socket.on('game_state_changed', function(data){
@@ -242,6 +416,39 @@
 
         socket.on('game_reset', function(){
             location.reload();
+        });
+
+        socket.on('score_update', function(data){
+            // Mettre à jour le score pour ce joueur spécifique
+            if (data['player_scores'] && data['player_scores']['{{name}}'] !== undefined) {
+                var newScore = data['player_scores']['{{name}}'];
+                var progressBar = document.getElementById('progress-bar');
+                var progressText = document.getElementById('progress-text');
+                var scoreElement = document.getElementById('score');
+                var debugQScore = document.getElementById('debug_qscore');
+                var progressScoreDisplay = document.getElementById('progress-score-display');
+                
+                console.log('Score update for {{name}}: old score vs new score', 
+                    progressBar ? progressBar.getAttribute('data-score') : 'no bar', 
+                    'vs', newScore);
+                
+                if (progressBar) {
+                    progressBar.setAttribute('data-score', newScore);
+                    updateProgressBar();
+                }
+                if (progressText) {
+                    progressText.textContent = newScore + ' pts';
+                }
+                if (scoreElement) {
+                    scoreElement.textContent = newScore + ' points';
+                }
+                if (debugQScore) {
+                    debugQScore.textContent = newScore;
+                }
+                if (progressScoreDisplay) {
+                    progressScoreDisplay.textContent = newScore;
+                }
+            }
         });
 
         function showPlayerGameFinishedScreen(data) {
@@ -493,6 +700,9 @@
           <li class="nav-item">
             &nbsp;| <i class="fa-solid fa-gamepad"></i> État: <strong id="player_game_state">{{game_state}}</strong>
           </li>
+          <li class="nav-item">
+            &nbsp;| <i class="fa-solid fa-chart-bar"></i> QScore: <strong id="debug_qscore">{{qscore}}</strong>
+          </li>
         </ul>
       </div>
     </nav>
@@ -509,8 +719,17 @@
     </div>
     <div id='question_main' class="mx-auto justify-content-center" {% if img == "" %} style="display:none;" {%endif%}>
         <div class="img-container">
-            <img class="qimage" id="qimage" src="/static/movies/{{img}}.png" alt="Question" />
-            <div class="bottomright" id="score">{{qscore}} points</div>
+            <div class="progress-container">
+                <div class="progress-text" id="progress-text">{{qscore}} pts</div>
+                <div class="progress-bar-vertical" id="progress-bar" data-score="{{qscore}}">
+                    <span class="progress-score-text" id="progress-score-display">{{qscore}}</span>
+                </div>
+                <div class="progress-label">Score</div>
+            </div>
+            <div style="position: relative;">
+                <img class="qimage" id="qimage" src="/static/movies/{{img}}.png" alt="Question" />
+                <div class="bottomright" id="score">{{qscore}} points</div>
+            </div>
         </div>
         <div id="choices">
         {% for c in choix %}
