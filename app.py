@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, jsonify
 from flask_socketio import SocketIO
 import os
 from player import Player
@@ -98,12 +98,39 @@ def player(token):
 def choose(token, answer):
     global question
     player = next((x for x in players if x.name == token), None)
-    player.score += question.check_answer(player.name, answer)
-    #socketio.emit('update_score', {'name':token, 'score':player.score})
+    points_earned = question.check_answer(player.name, answer)
+    player.score += points_earned
+    
+    # Déterminer si la réponse est correcte et envoyer une notification via Socket.IO
+    is_correct = points_earned > 0
+    if is_correct:
+        message = f"<i class='fa-solid fa-check-circle'></i> Bravo ! Réponse correcte ! +{points_earned} points"
+        message_type = "success"
+    else:
+        message = "<i class='fa-solid fa-times-circle'></i> Mauvaise réponse ! Essayez encore."
+        message_type = "error"
+    
+    # Envoyer la notification à tous les clients, mais avec le nom du joueur pour filtrage côté client
+    socketio.emit('answer_feedback', {
+        'player': token,
+        'message': message,
+        'type': message_type,
+        'is_correct': is_correct,
+        'points': points_earned
+    })
+    
     socketio.emit('update_score', players_to_table(False))
+    
+    new_question_generated = False
     if not question.active:
         print('new question')
         newQuestion()
+        new_question_generated = True
+    
+    # Si c'est une requête AJAX, retourner JSON au lieu de rediriger
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'fetch' in request.headers.get('User-Agent', '').lower():
+        return jsonify({'status': 'success', 'new_question': new_question_generated})
+    
     return redirect('/player/' + token)
 
 # Handler for a message recieved over 'connect' channel

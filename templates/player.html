@@ -86,6 +86,18 @@
             transform: scale(1.05);
             box-shadow: 0 0 10px #ffd700;
         }
+        .btn-wrong-answer {
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .btn-correct-answer {
+            background: linear-gradient(90deg, #4CAF50 0%, #45a049 100%) !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #4CAF50;
+            transition: all 0.3s ease;
+        }
         @media (max-width: 600px) {
             .navbar-nav .nav-item {
                 font-size: 1.1rem;
@@ -130,6 +142,45 @@
             transform: none !important;
             box-shadow: 0 2px 8px #222 !important;
         }
+        .answer-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            min-width: 250px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .answer-notification.show {
+            transform: translateX(0);
+        }
+        .answer-notification.success {
+            background: linear-gradient(90deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: 2px solid #4CAF50;
+        }
+        .answer-notification.error {
+            background: linear-gradient(90deg, #f44336 0%, #da190b 100%);
+            color: white;
+            border: 2px solid #f44336;
+        }
+        @media (max-width: 600px) {
+            .answer-notification {
+                right: 10px;
+                left: 10px;
+                transform: translateY(-100px);
+                min-width: auto;
+            }
+            .answer-notification.show {
+                transform: translateY(0);
+            }
+        }
     </style>
     <script type="text/javascript">
         var socket = io.connect('http://' + document.domain + ':' + location.port);
@@ -153,7 +204,7 @@
             for(var i in data['choices']){
                 c = data['choices'][i];
                 document.getElementById('choices').innerHTML +=
-                    '<a href="/choose/{{name}}/' + c + '"><button class="btn btn-primary">' + c + '</button></a>';
+                    '<button class="btn btn-primary" onclick="submitAnswer(\'' + c + '\', this)">' + c + '</button>';
             }
         });
 
@@ -169,6 +220,91 @@
         socket.on('game_resumed', function(){
             removePlayerPausedEffect();
         });
+
+        socket.on('answer_feedback', function(data){
+            // Vérifier si la notification est pour ce joueur
+            if (data.player === '{{name}}') {
+                showAnswerNotification(data);
+                // Gérer l'effet visuel sur le bouton selon la réponse
+                if (window.lastClickedButton) {
+                    if (data.is_correct) {
+                        highlightCorrectButton(window.lastClickedButton);
+                    } else {
+                        hideWrongButton(window.lastClickedButton);
+                    }
+                }
+            }
+        });
+
+        function showAnswerNotification(data) {
+            var notification = document.getElementById('answer-notification');
+            var content = document.getElementById('notification-content');
+            
+            // Configurer le contenu et le style (utiliser innerHTML pour les icônes)
+            content.innerHTML = data.message;
+            notification.className = 'answer-notification ' + data.type;
+            
+            // Afficher la notification
+            setTimeout(function() {
+                notification.classList.add('show');
+            }, 100);
+            
+            // Masquer après 4 secondes
+            setTimeout(function() {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        function submitAnswer(answer, buttonElement) {
+            // Stocker une référence au bouton cliqué pour un traitement ultérieur
+            window.lastClickedButton = buttonElement;
+            
+            // Désactiver le bouton cliqué pour éviter les clics multiples
+            buttonElement.disabled = true;
+            
+            // Envoyer la réponse via fetch (AJAX)
+            fetch('/choose/{{name}}/' + answer, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(function(response) {
+                return response.json();
+            }).then(function(data) {
+                // La notification sera affichée via Socket.IO
+                // Réactiver le bouton après un court délai seulement si la réponse n'était pas incorrecte
+                setTimeout(function() {
+                    // Le bouton sera soit réactivé soit masqué selon la réponse
+                    if (buttonElement.style.display !== 'none') {
+                        buttonElement.disabled = false;
+                    }
+                }, 1000);
+            }).catch(function(error) {
+                console.error('Erreur:', error);
+                // Réactiver le bouton en cas d'erreur
+                buttonElement.disabled = false;
+            });
+        }
+
+        function hideWrongButton(buttonElement) {
+            // Ajouter la classe CSS pour l'animation de disparition
+            buttonElement.classList.add('btn-wrong-answer');
+            
+            // Masquer complètement après l'animation
+            setTimeout(function() {
+                buttonElement.style.display = 'none';
+            }, 300);
+        }
+
+        function highlightCorrectButton(buttonElement) {
+            // Ajouter la classe CSS pour mettre en évidence la bonne réponse
+            buttonElement.classList.add('btn-correct-answer');
+            
+            // Remettre le style normal après 2 secondes
+            setTimeout(function() {
+                buttonElement.classList.remove('btn-correct-answer');
+            }, 2000);
+        }
 
         function applyPlayerPausedEffect() {
             var image = document.getElementById('qimage');
@@ -256,6 +392,11 @@
     </script>
 </head>
 <body>
+    <!-- Notification de réponse -->
+    <div id="answer-notification" class="answer-notification">
+        <div id="notification-content"></div>
+    </div>
+
     <nav class="navbar navbar-expand-sm">
       <div class="container-fluid">
         <ul class="navbar-nav">
@@ -294,7 +435,7 @@
         </div>
         <div id="choices">
         {% for c in choix %}
-           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary">{{c}}</button></a>
+           <button class="btn btn-primary" onclick="submitAnswer('{{c}}', this)">{{c}}</button>
         {% endfor %}
         </div>
     </div>
