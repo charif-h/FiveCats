@@ -1,0 +1,130 @@
+body {
+    background: url('../backgrounds/cats-bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+}
+
+.game-container {
+    background: rgba(34, 34, 34, 0.85);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    margin: 40px auto;
+    padding: 30px;
+    max-width: 1200px;
+}
+
+h1 {
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 2.2rem;
+    letter-spacing: 2px;
+    color: #ffd700;
+    text-shadow: 2px 2px 8px #222;
+}
+
+.table {
+    background: rgba(0,0,0,0.5);
+    border-radius: 10px;
+}
+
+th, td {
+    color: #fff;
+    vertical-align: middle;
+}
+
+.progress {
+    height: 40px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.progress-bar {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(90deg, #ff9800 0%, #ff5e62 100%);
+    border-radius: 10px;
+    transition: width 0.5s;
+}
+
+.progress-bar.bg-danger {
+    background: linear-gradient(90deg, #ff5e62 0%, #ff9800 100%);
+}
+
+.progress-bar.bg-info {
+    background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);
+}
+
+#qimage {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    border-radius: 15px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    background: #222;
+    padding: 10px;
+}
+
+.fa-cat {
+    color: #ff9800;
+    margin-right: 10px;
+}
+
+.image-container {
+    position: relative;
+    display: inline-block;
+}
+
+.expired-label {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3rem;
+    font-weight: bold;
+    color: #ff0000;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    z-index: 2;
+}
+
+.expired-image {
+    opacity: 0.2;
+    transition: opacity 0.5s ease;
+}
+
+#pauseBtn {
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    min-width: 140px;
+}
+
+#pauseBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+}
+
+.paused-image {
+    filter: blur(10px);
+    opacity: 0.3;
+    transition: all 0.5s ease;
+}
+
+.paused-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px 40px;
+    border-radius: 15px;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    text-shadow: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    z-index: 10;
+}
