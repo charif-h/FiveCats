@@ -61,7 +61,7 @@
         <table class="table table-striped">
             <thead>
               <tr>
-                <th><i class="fa-solid fa-user"></i> Nom</th>
+                <th><i class="fa-solid fa-user"></i> Joueur</th>
                 <th><i class="fa-solid fa-star"></i> Score</th>
                 <th><i class="fa-solid fa-qrcode"></i> QR Code</th>
                 <th><i class="fa-solid fa-trash"></i> Supprimer</th>
@@ -71,9 +71,23 @@
               {% for r in players %}
               <tr>
                 <td>
-                  <a href="/player/{{ r[0] }}" target="_blank">
-                    {{ r[0] }}
-                  </a>
+                  <div class="d-flex align-items-center">
+                    {% if r[2] %}
+        <img src="{{ url_for('static', filename='avatars/' + r[2]) }}" 
+          alt="Avatar" 
+          class="player-avatar me-2" 
+          data-player-name="{{ r[0] }}"
+          style="width: 48px; height: 48px; border-radius: 50%; cursor: pointer;"
+          title="Voir le profil de {{ r[0] }}"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+        <i class="fa-solid fa-user me-2" style="display: none; width: 48px; text-align: center;"></i>
+                    {% else %}
+        <i class="fa-solid fa-user me-2" style="width: 48px; text-align: center;"></i>
+                    {% endif %}
+                    <a href="/player/{{ r[0] }}" target="_blank" class="text-decoration-none">
+                      {{ r[0] }}
+                    </a>
+                  </div>
                 </td>
                 <td>{{ r[1] }}</td>
                 <td>
@@ -145,6 +159,93 @@
       form.submit();
     }
   }
+
+  // Fonctionnalité de carte de profil joueur
+  function attachAvatarClickHandlers() {
+    document.querySelectorAll('.player-avatar').forEach(function(avatar) {
+      avatar.addEventListener('click', function(e) {
+        e.preventDefault();
+        const playerName = this.getAttribute('data-player-name');
+        showPlayerProfileCard(playerName);
+      });
+    });
+  }
+
+  function showPlayerProfileCard(playerName) {
+    // Récupérer les détails du joueur via API
+    fetch(`/api/player-details/${playerName}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          console.error('Erreur:', data.error);
+          return;
+        }
+        
+        // Remplir la carte avec les données
+        document.getElementById('cardPlayerName').textContent = data.name;
+        document.getElementById('cardPlayerAvatar').src = `/static/avatars/${data.avatar}`;
+        document.getElementById('cardPlayerScore').textContent = data.score;
+        document.getElementById('cardPlayerRanking').textContent = `#${data.ranking}`;
+        document.getElementById('cardPlayerQR').src = data.qrcode;
+        
+        // Afficher la carte
+        document.getElementById('playerProfileCard').style.display = 'block';
+        document.getElementById('cardProfileOverlay').style.display = 'block';
+      })
+      .catch(error => {
+        console.error('Erreur lors de la récupération des détails du joueur:', error);
+      });
+  }
+
+  function closePlayerProfileCard() {
+    document.getElementById('playerProfileCard').style.display = 'none';
+    document.getElementById('cardProfileOverlay').style.display = 'none';
+  }
+
+  // Attacher les gestionnaires d'événements au chargement de la page
+  document.addEventListener('DOMContentLoaded', function() {
+    attachAvatarClickHandlers();
+  });
+</script>
+
+<!-- Carte modale pour le profil joueur -->
+<div id="playerProfileCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:400px; z-index:9999; max-width:500px;">
+  <div class="card-header bg-primary text-white text-center">
+    <span id="cardPlayerName" style="font-weight:bold;"></span>
+    <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerProfileCard()"></button>
+  </div>
+  <div class="card-body text-center">
+    <div class="mb-3">
+      <img id="cardPlayerAvatar" src="" alt="Avatar" style="width:150px; height:150px; border-radius:50%; border: 3px solid #0d6efd;">
+    </div>
+    <div class="row mb-3">
+      <div class="col-6">
+        <div class="card bg-light">
+          <div class="card-body p-2">
+            <h6 class="card-title mb-1">Score</h6>
+            <h4 class="text-primary mb-0" id="cardPlayerScore">0</h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="card bg-light">
+          <div class="card-body p-2">
+            <h6 class="card-title mb-1">Classement</h6>
+            <h4 class="text-success mb-0" id="cardPlayerRanking">#1</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mb-3">
+      <h6>QR Code</h6>
+      <div class="qr-bg d-inline-block">
+        <img id="cardPlayerQR" src="" style="width:120px;">
+      </div>
+    </div>
+  </div>
+</div>
+<div id="cardProfileOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9998;" onclick="closePlayerProfileCard()"></div>
+
 </script>
 </body>
 </html>

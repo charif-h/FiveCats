@@ -291,3 +291,13 @@ body {
         transform: translateY(0);
     }
 }
+
+/* Styles pour les avatars */
+.player-avatar {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.player-avatar:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(255, 159, 0, 0.5);
+}

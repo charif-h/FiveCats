@@ -77,13 +77,23 @@ def addplayer():
     global game_state
     name = request.form.get('player_name', '').strip()
     error = None
+    
     if not name:
         error = "Le nom du joueur ne peut pas être vide."
     elif any(p.name == name for p in players):
         error = f"Le joueur '{name}' existe déjà."
+    
     if error:
         return render_template('index.html', players=players_to_table(), error=error, game_state=game_state)
-    players.append(Player(name))
+    
+    try:
+        players.append(Player(name))
+        print(f"Player {name} successfully added")
+    except Exception as e:
+        error = f"Erreur lors de la création du joueur: {str(e)}"
+        print(f"Error creating player {name}: {e}")
+        return render_template('index.html', players=players_to_table(), error=error, game_state=game_state)
+    
     return redirect('/')
 
 @app.route('/deleteplayer', methods=['POST'])
@@ -134,7 +144,17 @@ def player(token):
 
     return render_template('player.html', name=player.name,
                            score=player.score, choix=pq_choix,
-                           img=pq_image, qscore = pq_value, game_state=game_state)
+                           img=pq_image, qscore = pq_value, game_state=game_state, avatar=player.avatar)
+
+@app.route('/api/player-details/<player_name>')
+def get_player_card_details(player_name):
+    """API pour obtenir les détails d'un joueur pour la carte"""
+    player_details = get_player_details()
+    player_info = next((p for p in player_details if p['name'] == player_name), None)
+    if player_info:
+        return jsonify(player_info)
+    else:
+        return jsonify({'error': 'Player not found'}), 404
 
 @app.route('/choose/<token>/<answer>', methods=['POST', 'GET'])
 def choose(token, answer):
@@ -388,11 +408,47 @@ def players_to_table(with_token = True):
     tbl = []
     players.sort(key=lambda x: x.score, reverse=True)
     for p in players:
+        # Vérifier si le joueur a un avatar, sinon assigner un avatar par défaut
+        if not hasattr(p, 'avatar') or not p.avatar:
+            import random
+            import os
+            avatar_folder = 'static/avatars'
+            if os.path.exists(avatar_folder):
+                avatars = [f for f in os.listdir(avatar_folder) if f.endswith('.png')]
+                p.avatar = random.choice(avatars) if avatars else 'default.png'
+            else:
+                p.avatar = 'default.png'
+        
         if with_token:
-            tbl.append([p.name, p.score, p.token])
+            tbl.append([p.name, p.score, p.avatar, p.token])
         else:
-            tbl.append([p.name, p.score])
+            tbl.append([p.name, p.score, p.avatar])
     return tbl
+
+def get_player_details():
+    """Retourne les détails complets des joueurs avec classement"""
+    players_details = []
+    players.sort(key=lambda x: x.score, reverse=True)
+    for index, p in enumerate(players):
+        # Vérifier si le joueur a un avatar, sinon assigner un avatar par défaut
+        if not hasattr(p, 'avatar') or not p.avatar:
+            import random
+            import os
+            avatar_folder = 'static/avatars'
+            if os.path.exists(avatar_folder):
+                avatars = [f for f in os.listdir(avatar_folder) if f.endswith('.png')]
+                p.avatar = random.choice(avatars) if avatars else 'default.png'
+            else:
+                p.avatar = 'default.png'
+                
+        players_details.append({
+            'name': p.name,
+            'score': p.score,
+            'avatar': p.avatar,
+            'ranking': index + 1,
+            'qrcode': f"static/players/{p.name}.svg"
+        })
+    return players_details
 
 def newQuestion():
     global question, game_state
