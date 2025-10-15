@@ -391,44 +391,46 @@
     </div>
 
     <!-- Interface principale du jeu -->
-    <div id="game_interface" class="row" {% if game_state == 'loading' %}style="display: none;"{% endif %}>
-        <div class="col-md-4">
-            <h1><i class="fa-solid fa-cat"></i> Joueurs</h1>
-            <table class="table table-striped">
-                <thead>
-                  <tr>
-                    <th><i class="fa-solid fa-user"></i> Nom</th>
-                    <th><i class="fa-solid fa-star"></i> Score</th>
-                  </tr>
-                </thead>
-                <tbody id="players_ranking">
-                  {% for r in players %}
-                  <tr>
-                    <td>{{ r[0] }}</td>
-                    <td><p id="{{ r[0] }}_score">{{ r[1] }}</p></td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="col-md-8 text-center">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h1><i class="fa-solid fa-question"></i> Question</h1>
-                <div>
-                    <button id="pauseBtn" class="btn btn-warning btn-lg me-2" onclick="togglePause()" style="display: none;">
+    <div id="game_interface" {% if game_state == 'loading' %}style="display: none;"{% endif %}>
+        <div class="row">
+            <div class="col-md-4">
+                <h1><i class="fa-solid fa-cat"></i> Joueurs</h1>
+                <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th><i class="fa-solid fa-user"></i> Nom</th>
+                        <th><i class="fa-solid fa-star"></i> Score</th>
+                      </tr>
+                    </thead>
+                    <tbody id="players_ranking">
+                      {% for r in players %}
+                      <tr>
+                        <td>{{ r[0] }}</td>
+                        <td><p id="{{ r[0] }}_score">{{ r[1] }}</p></td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                </table>
+                
+                <!-- Boutons de contrôle sous la liste des joueurs -->
+                <div class="mt-3">
+                    <button id="pauseBtn" class="btn btn-warning btn-lg w-100 mb-2" onclick="togglePause()" style="display: none;">
                         <i class="fa-solid fa-pause"></i> Pause
                     </button>
-                    <button id="endGameBtn" class="btn btn-danger btn-lg" onclick="endGame()">
+                    <button id="endGameBtn" class="btn btn-danger btn-lg w-100 mb-2" onclick="endGame()">
                         <i class="fa-solid fa-flag-checkered"></i> Terminer
                     </button>
                 </div>
             </div>
-            <div class="progress mb-3">
-                <div class="progress-bar" id="prog-timer" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="30"></div>
-            </div>
-            <div class="image-container">
-                <div id="expired-text" class="expired-label">EXPIRED</div>
-                <img id="qimage" src="/static/movies/{{img}}.png" alt="Question Image"/>
+            <div class="col-md-8">
+                <h1 class="mb-3 text-center"><i class="fa-solid fa-question"></i> Question</h1>
+                <div class="progress mb-3">
+                    <div class="progress-bar" id="prog-timer" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="30"></div>
+                </div>
+                <div class="image-container text-center">
+                    <div id="expired-text" class="expired-label">EXPIRED</div>
+                    <img id="qimage" src="/static/movies/{{img}}.png" alt="Question Image" style="max-width: 100%; height: auto;"/>
+                </div>
             </div>
         </div>
     </div> <!-- fin game_interface -->
