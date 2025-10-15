@@ -168,12 +168,15 @@ def choose(token, answer):
     })
     
     # Calculer et envoyer les nouveaux scores pour tous les joueurs après chaque réponse
-    updated_scores = {}
+    updated_total_scores = {}
+    updated_question_scores = {}
     for p in players:
-        updated_scores[p.name] = question.getQuestionValue(p.name)
+        updated_total_scores[p.name] = p.score  # Score total cumulé du joueur
+        updated_question_scores[p.name] = question.getQuestionValue(p.name)  # Score de la question actuelle
     
     socketio.emit('score_update', {
-        'player_scores': updated_scores,
+        'player_scores': updated_total_scores,
+        'question_scores': updated_question_scores,
         'global_score_id': question.score_id
     })
     
@@ -405,14 +408,17 @@ def newQuestion():
     print(question.choices_to_json())
     
     # Calculer les scores pour chaque joueur
-    player_scores = {}
+    player_total_scores = {}
+    player_question_scores = {}
     for player in players:
-        player_scores[player.name] = question.getQuestionValue(player.name)
+        player_total_scores[player.name] = player.score  # Score total cumulé du joueur
+        player_question_scores[player.name] = question.getQuestionValue(player.name)  # Score de la question actuelle
     
     socketio.emit('new_question', {
         'image': question.image, 
         'choices': question.choix,
-        'player_scores': player_scores
+        'player_scores': player_total_scores,
+        'question_scores': player_question_scores
     })
 
 
