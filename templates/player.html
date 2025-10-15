@@ -112,21 +112,7 @@
             font-size: 0.8rem;
             white-space: nowrap;
         }
-        .bottomright {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.1rem;
-            border: 2px solid #ff9800;
-            border-radius: 6px;
-            background: rgba(255, 223, 186, 0.95);
-            color: #222;
-            padding: 6px 15px;
-            font-weight: bold;
-            min-width: 100px;
-            text-align: center;
-        }
+
         #choices {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -216,10 +202,7 @@
                 font-size: 1rem;
                 padding: 10px 6px;
             }
-            .bottomright {
-                font-size: 1rem;
-                padding: 4px 10px;
-            }
+            
         }
         /* Style pour gérer le nombre impair de boutons */
         #choices .btn-primary:last-child:nth-child(odd) {
@@ -307,7 +290,23 @@
             // Initialiser la barre de progression
             console.log('Initial qscore for {{name}}:', '{{qscore}}');
             updateProgressBar();
+            
+            // Demander une synchronisation immédiate
+            setTimeout(function() {
+                socket.emit('ping_game_state');
+            }, 100);
         });
+
+        socket.on('game_state_sync', function(data) {
+            console.log('Game state sync received:', data.state, 'at', new Date(data.timestamp * 1000));
+            document.getElementById('player_game_state').innerHTML = data.state;
+            updatePlayerInterface(data.state);
+        });
+
+        // Système de heartbeat pour vérifier la synchronisation toutes les 10 secondes
+        setInterval(function() {
+            socket.emit('ping_game_state');
+        }, 10000);
 
         function updateProgressBar() {
             var progressBar = document.getElementById('progress-bar');
@@ -398,8 +397,14 @@
         });
 
         socket.on('game_state_changed', function(data){
-            document.getElementById('player_game_state').innerHTML = data['state'];
-            updatePlayerInterface(data['state']);
+            console.log('Game state changed to:', data.state, 'sync:', data.sync, 'timestamp:', data.timestamp);
+            document.getElementById('player_game_state').innerHTML = data.state;
+            updatePlayerInterface(data.state);
+            
+            // Si c'est une synchronisation initiale, afficher un message
+            if (data.sync) {
+                console.log('Initial game state synchronization completed');
+            }
         });
 
         socket.on('game_paused', function(){
@@ -643,18 +648,60 @@
             }
         });
 
+        socket.on('recharging_countdown', function(data){
+            if (document.getElementById('recharging_countdown')) {
+                document.getElementById('recharging_countdown').innerHTML = data['count'];
+            }
+        });
+
+        socket.on('show_correct_answer', function(data){
+            var display = document.getElementById('correct_answer_display');
+            if (display) {
+                display.innerHTML = data['message'];
+            }
+        });
+
+        socket.on('hide_other_choices', function(data){
+            // Si c'est pour ce joueur, masquer toutes les options sauf la bonne réponse
+            if (data.player === '{{name}}') {
+                var buttons = document.querySelectorAll('#choices .btn-primary');
+                buttons.forEach(function(button) {
+                    if (button.textContent.trim() !== data.correct_answer) {
+                        button.style.display = 'none';
+                    } else {
+                        // Mettre en évidence la bonne réponse
+                        button.classList.add('btn-correct-answer');
+                        button.disabled = true;
+                    }
+                });
+            }
+        });
+
+        socket.on('force_disconnect', function(){
+            console.log('Game ended - disconnecting...');
+            socket.disconnect();
+            setTimeout(function() {
+                window.location.href = '/';
+            }, 2000);
+        });
+
         function updatePlayerInterface(state) {
-            if (state === 'loading') {
-                document.getElementById('countdown_screen').style.display = 'block';
-                document.getElementById('waiting').style.display = 'none';
-                document.getElementById('question_main').style.display = 'none';
-            } else if (state === 'waiting') {
+            console.log('Updating player interface to state:', state);
+            
+            if (state === 'waiting') {
                 document.getElementById('countdown_screen').style.display = 'none';
                 document.getElementById('waiting').style.display = 'block';
                 document.getElementById('question_main').style.display = 'none';
-            } else if (state === 'in_progress' || state === 'paused') {
+                document.getElementById('recharging_screen').style.display = 'none';
+            } else if (state === 'loading') {
+                document.getElementById('countdown_screen').style.display = 'block';
+                document.getElementById('waiting').style.display = 'none';
+                document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+            } else if (state === 'in_progress') {
                 document.getElementById('countdown_screen').style.display = 'none';
-                // Vérifier s'il y a une question active en regardant l'image et les choix
+                document.getElementById('recharging_screen').style.display = 'none';
+                // Vérifier s'il y a une question active
                 var questionImg = document.getElementById('qimage');
                 var choices = document.getElementById('choices');
                 var hasActiveQuestion = questionImg && questionImg.src && 
@@ -669,10 +716,30 @@
                     document.getElementById('waiting').style.display = 'block';
                     document.getElementById('question_main').style.display = 'none';
                 }
-            } else {
+            } else if (state === 'recharging') {
                 document.getElementById('countdown_screen').style.display = 'none';
                 document.getElementById('waiting').style.display = 'none';
                 document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'block';
+            } else if (state === 'paused') {
+                // Appliquer l'effet de pause
+                applyPlayerPausedEffect();
+            } else if (state === 'finished') {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('waiting').style.display = 'none';
+                document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+            } else {
+                // État par défaut
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('waiting').style.display = 'block';
+                document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+            }
+            
+            // Si on sort de pause, retirer l'effet
+            if (state !== 'paused') {
+                removePlayerPausedEffect();
             }
         }
     </script>
@@ -714,6 +781,14 @@
         <p class="lead" style="color: #fff;">Préparez-vous {{name}} !</p>
     </div>
     
+    <!-- Écran de recharging -->
+    <div id="recharging_screen" class="text-center" style="display: none; margin-top: 50px;">
+        <h1 class="mb-4" style="color: #ffd700;"><i class="fa-solid fa-refresh"></i> Préparation question suivante...</h1>
+        <div id="correct_answer_display" class="mb-4" style="color: #4CAF50; font-size: 1.5rem; font-weight: bold;"></div>
+        <div id="recharging_countdown" class="display-1 text-info mb-4" style="font-size: 4rem; font-weight: bold; text-shadow: 3px 3px 6px #000;">5</div>
+        <p class="lead" style="color: #fff;">Prochaine question dans...</p>
+    </div>
+    
     <div id="waiting" {% if img != "" %} style="display:none;" {%endif%}>
         <span>En attente des autres joueurs...</span> <div class="spinner-border" role="status"></div>
     </div>
@@ -728,7 +803,6 @@
             </div>
             <div style="position: relative;">
                 <img class="qimage" id="qimage" src="/static/movies/{{img}}.png" alt="Question" />
-                <div class="bottomright" id="score">{{qscore}} points</div>
             </div>
         </div>
         <div id="choices">

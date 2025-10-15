@@ -138,6 +138,43 @@
                 updateInterface('loading');
                 startCountdown();
             }
+
+            
+            // Demander une synchronisation immédiate
+            setTimeout(function() {
+                socket.emit('ping_game_state');
+            }, 100);
+        });
+
+        socket.on('game_state_sync', function(data) {
+            console.log('Game state sync received:', data.state, 'at', new Date(data.timestamp * 1000));
+            updateInterface(data.state);
+        });
+
+        // Système de heartbeat pour vérifier la synchronisation toutes les 10 secondes
+        setInterval(function() {
+            socket.emit('ping_game_state');
+        }, 10000);
+
+        socket.on('recharging_countdown', function(data){
+            if (document.getElementById('recharging_countdown_game')) {
+                document.getElementById('recharging_countdown_game').innerHTML = data['count'];
+            }
+        });
+
+        socket.on('show_correct_answer', function(data){
+            var display = document.getElementById('correct_answer_display_game');
+            if (display) {
+                display.innerHTML = data['message'];
+            }
+        });
+
+        socket.on('force_disconnect', function(){
+            console.log('Game ended - disconnecting...');
+            socket.disconnect();
+            setTimeout(function() {
+                window.location.href = '/';
+            }, 2000);
         });
 
         socket.on('update_score', function (data) {
@@ -342,22 +379,38 @@
         }
 
         function updateInterface(state) {
+            console.log('Updating game interface to state:', state);
+            
             if (state === 'loading') {
                 document.getElementById('countdown_screen').style.display = 'block';
                 document.getElementById('game_interface').style.display = 'none';
-            } else {
+                document.getElementById('recharging_screen').style.display = 'none';
+            } else if (state === 'recharging') {
                 document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('game_interface').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'block';
+            } else if (state === 'finished') {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('game_interface').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+                // L'écran de fin sera géré par un autre événement
+            } else {
+                // in_progress, waiting, paused
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
                 document.getElementById('game_interface').style.display = 'block';
             }
+            
+            updatePauseButton(state);
         }
 
         // Fonction pour basculer entre pause et continue
         function togglePause() {
             var currentState = document.getElementById('game_state_display').innerHTML;
-            if (currentState === 'in_progress') {
-                socket.emit('change_game_state', {'state': 'paused'});
+            if (currentState === 'in_progress' || currentState === 'recharging') {
+                socket.emit('game_paused');
             } else if (currentState === 'paused') {
-                socket.emit('change_game_state', {'state': 'in_progress'});
+                socket.emit('game_resumed');
             }
         }
 
@@ -445,6 +498,14 @@
         <h1 class="mb-4"><i class="fa-solid fa-clock"></i> Le jeu commence dans...</h1>
         <div id="countdown_number" class="display-1 text-warning mb-4" style="font-size: 8rem; font-weight: bold; text-shadow: 3px 3px 6px #000;">5</div>
         <p class="lead">Préparez-vous !</p>
+    </div>
+
+    <!-- Écran de recharging -->
+    <div id="recharging_screen" class="text-center" style="display: none;">
+        <h1 class="mb-4"><i class="fa-solid fa-refresh"></i> Question terminée !</h1>
+        <div id="correct_answer_display_game" class="mb-4" style="color: #4CAF50; font-size: 2rem; font-weight: bold;"></div>
+        <div id="recharging_countdown_game" class="display-1 text-info mb-4" style="font-size: 6rem; font-weight: bold; text-shadow: 3px 3px 6px #000;">5</div>
+        <p class="lead">Prochaine question dans...</p>
     </div>
 
     <!-- Interface principale du jeu -->

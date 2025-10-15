@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, jsonify
 from flask_socketio import SocketIO
 import os
+import time
 from player import Player
 from question import Question
 
@@ -13,6 +14,29 @@ choices = 10
 Timer = choices*6
 total = 0
 game_state = 'waiting'
+previous_state = None  # Pour mémoriser l'état avant pause
+
+def set_game_state(new_state, broadcast=True):
+    """Fonction centralisée pour changer le game_state et assurer la synchronisation"""
+    global game_state, previous_state
+    old_state = game_state
+    
+    # Si on passe en pause, mémoriser l'état précédent
+    if new_state == 'paused' and old_state != 'paused':
+        previous_state = old_state
+    
+    game_state = new_state
+    print(f'Game state changed from {old_state} to: {game_state}')
+    
+    if broadcast:
+        # Toujours diffuser le changement d'état à tous les clients connectés
+        socketio.emit('game_state_changed', {
+            'state': game_state, 
+            'timestamp': time.time(),
+            'previous_state': previous_state
+        })
+    
+    return old_state
 
 
 @app.route('/')
@@ -33,8 +57,7 @@ def session():
     global choices
     global Timer
     global total
-    global game_state
-    game_state = 'loading'
+    set_game_state('loading')  # Utiliser la fonction centralisée
     choices = int(request.form['choices'])
     Timer = int(request.form['Timer'])
     total = int(request.form['total'])
@@ -46,8 +69,8 @@ def session():
     for p in players:
         scores.append([p.name, p.score])
 
-    newQuestion()
-    return render_template('game.html', players=players_to_table(), img=question.image, game_state=game_state)
+    # Ne pas créer la question tout de suite, attendre la fin du countdown
+    return render_template('game.html', players=players_to_table(), img="", game_state=game_state)
 
 @app.route('/addplayer', methods=['POST'])
 def addplayer():
@@ -72,7 +95,7 @@ def deleteplayer():
 
 @app.route('/terminate_game', methods=['POST'])
 def terminate_game():
-    global game_state, question
+    global question
     if game_state in ['loading', 'in_progress', 'paused']:
         # Terminer le jeu en cours
         socketio.emit('end_game', {
@@ -81,12 +104,10 @@ def terminate_game():
             'winner': get_winner() if players else None,
             'message': 'Le jeu a été terminé manuellement par l\'administrateur.'
         })
-        game_state = 'waiting'  # Revenir à l'état d'attente
+        set_game_state('waiting')  # Utiliser la fonction centralisée
         # Nettoyer la question active
         if 'question' in globals():
             del question
-        # Émettre le changement d'état
-        socketio.emit('game_state_changed', {'state': game_state})
     return redirect('/')
 
 @app.route('/player/<token>', methods=['POST', 'GET'])
@@ -127,6 +148,12 @@ def choose(token, answer):
     if is_correct:
         message = f"<i class='fa-solid fa-check-circle'></i> Bravo ! Réponse correcte ! +{points_earned} points"
         message_type = "success"
+        
+        # Si bonne réponse, masquer toutes les autres options pour ce joueur
+        socketio.emit('hide_other_choices', {
+            'player': token,
+            'correct_answer': question.image
+        })
     else:
         message = "<i class='fa-solid fa-times-circle'></i> Mauvaise réponse ! Essayez encore."
         message_type = "error"
@@ -152,10 +179,20 @@ def choose(token, answer):
     
     socketio.emit('update_score', players_to_table(False))
     
+    # Vérifier si la question est terminée (tous ont trouvé OU plus d'options)
     new_question_generated = False
     if not question.active:
-        print('new question')
-        newQuestion()
+        print('Question finished - entering recharging state')
+        set_game_state('recharging')
+        
+        # Afficher la réponse correcte et démarrer le countdown de 5 secondes
+        socketio.emit('show_correct_answer', {
+            'correct_answer': question.image,
+            'message': f'La bonne réponse était : {question.image}'
+        })
+        
+        # Démarrer le délai de recharge
+        socketio.start_background_task(recharging_countdown)
         new_question_generated = True
     
     # Si c'est une requête AJAX, retourner JSON au lieu de rediriger
@@ -167,10 +204,21 @@ def choose(token, answer):
 # Handler for a message recieved over 'connect' channel
 @socketio.on('connect')
 def handle_connect():
-    global game_state
     print('Client connected')
-    # Envoyer l'état actuel du jeu au nouveau client
-    socketio.emit('game_state_changed', {'state': game_state})
+    # Envoyer l'état actuel du jeu au nouveau client avec timestamp
+    socketio.emit('game_state_changed', {
+        'state': game_state, 
+        'timestamp': time.time(),
+        'sync': True  # Indique que c'est une synchronisation initiale
+    })
+
+@socketio.on('ping_game_state')
+def handle_ping_game_state():
+    """Gestionnaire pour les demandes de synchronisation du game_state"""
+    socketio.emit('game_state_sync', {
+        'state': game_state,
+        'timestamp': time.time()
+    })
 
 @socketio.on('start_game')
 def handle_start_game():
@@ -187,14 +235,21 @@ def handle_timeout():
     global question
     question.time_out()
     print(question)
-    socketio.emit('time_out')
     socketio.emit('update_score', players_to_table(False))
     
     # Vérifier si la question est devenue inactive après le timeout
     if not question.active:
-        print('Question expired - will generate new question in 5 seconds')
-        # Utiliser start_background_task avec le contexte d'application
-        socketio.start_background_task(delayed_new_question)
+        print('Question expired - entering recharging state')
+        set_game_state('recharging')
+        
+        # Afficher la réponse correcte
+        socketio.emit('show_correct_answer', {
+            'correct_answer': question.image,
+            'message': f'Temps écoulé ! La bonne réponse était : {question.image}'
+        })
+        
+        # Démarrer le countdown de recharge
+        socketio.start_background_task(recharging_countdown)
 
 def delayed_new_question():
     import time
@@ -203,22 +258,44 @@ def delayed_new_question():
         print('Generating new question after EXPIRED delay')
         newQuestion()
 
+def recharging_countdown():
+    """Gère le countdown de 5 secondes en état recharging"""
+    import time
+    with app.app_context():
+        # Envoyer le countdown de recharge
+        for i in range(5, 0, -1):
+            socketio.emit('recharging_countdown', {'count': i})
+            time.sleep(1)
+        
+        # Après le countdown, retourner à in_progress avec nouvelle question
+        print('Recharging finished - returning to in_progress')
+        set_game_state('in_progress')
+        newQuestion()
+
+def delayed_disconnect_all():
+    """Déconnecte tous les clients après la fin du jeu"""
+    import time
+    with app.app_context():
+        time.sleep(10)  # Attendre 10 secondes pour que les clients voient l'écran de fin
+        print('Disconnecting all clients after game end')
+        socketio.emit('force_disconnect')
+
 @socketio.on('change_game_state')
 def handle_change_game_state(data):
-    global game_state
-    global question
+    global question, previous_state
     new_state = data.get('state', 'waiting')
-    old_state = game_state
-    game_state = new_state
-    print(f'Game state changed from {old_state} to: {game_state}')
+    old_state = set_game_state(new_state)  # Utiliser la fonction centralisée
     
     # Générer une nouvelle question quand on passe à in_progress depuis loading
     if old_state == 'loading' and new_state == 'in_progress':
         if len(imgs) > 0 and len(players) > 0:
             newQuestion()
     
-    # Émettre le changement d'état à tous les clients connectés
-    socketio.emit('game_state_changed', {'state': game_state})
+    # Restaurer l'état précédent si on sort de pause
+    elif old_state == 'paused' and new_state == 'continue':
+        if previous_state:
+            set_game_state(previous_state)
+            previous_state = None
 
 @socketio.on('countdown_update')
 def handle_countdown_update(data):
@@ -229,18 +306,22 @@ def handle_countdown_update(data):
 @socketio.on('game_paused')
 def handle_game_paused():
     print('Game paused - notifying all players')
-    socketio.emit('game_paused')
+    set_game_state('paused')
 
 @socketio.on('game_resumed')
 def handle_game_resumed():
+    global previous_state
     print('Game resumed - notifying all players')
-    socketio.emit('game_resumed')
+    if previous_state:
+        set_game_state(previous_state)
+        previous_state = None
+    else:
+        set_game_state('in_progress')  # Fallback
 
 @socketio.on('end_game')
 def handle_end_game(data=None):
-    global game_state
     reason = data.get('reason', 'manual') if data else 'manual'
-    game_state = 'finished'
+    set_game_state('finished')
     
     final_scores = players_to_table(False)
     winner = get_winner() if players else None
@@ -252,6 +333,9 @@ def handle_end_game(data=None):
         'winner': winner,
         'message': get_end_game_message(reason, winner)
     })
+    
+    # Déconnecter tous les clients après 10 secondes
+    socketio.start_background_task(delayed_disconnect_all)
 
 def get_winner():
     if not players:
@@ -278,8 +362,8 @@ def handle_disconnect():
 
 @socketio.on('reset_game')
 def handle_reset_game():
-    global game_state, players, imgs, question
-    game_state = 'waiting'
+    global players, imgs, question
+    set_game_state('waiting')
     
     # Réinitialiser les scores des joueurs
     for player in players:
@@ -295,7 +379,6 @@ def handle_reset_game():
     
     print('Game reset')
     socketio.emit('game_reset')
-    socketio.emit('game_state_changed', {'state': game_state})
 
 
 def players_to_table(with_token = True):
