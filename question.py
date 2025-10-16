@@ -1,5 +1,4 @@
 import random
-from flask import jsonify
 
 class Question:
     def __init__(self, imgs, players, choices):
@@ -32,6 +31,8 @@ class Question:
     def time_out(self):
         for p in self.players_choices.keys():
             self.players_choices[p] = []
+        # Mettre à jour le statut actif après le timeout
+        self.active = False
 
     def getQuestionValue(self, player_token=None):
         if player_token is None:
@@ -43,5 +44,6 @@ class Question:
         print("ici ...")
         print(self.players_choices)
         print()
-        return jsonify(self.players_choices)
+        # Retourner directement le dictionnaire au lieu d'utiliser jsonify
+        return self.players_choices
 

@@ -6,14 +6,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="static/css/player.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/player.css') }}" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
     <script type="text/javascript">
         var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var currentPlayerGameState = '{{game_state}}'; // Variable pour stocker l'état actuel du jeu
 
         socket.on('connect', function () {
             console.log('Connected to the server');
+            // Initialiser l'interface selon l'état actuel du jeu
+            updatePlayerInterface(currentPlayerGameState);
+            // Initialiser la barre de progression
+            console.log('Initial qscore for {{name}}:', '{{qscore}}');
+            updateProgressBar();
+            // Initialiser le score de la navbar avec le score actuel
+            initializeNavbarScore();
+            
+            // Demander une synchronisation immédiate
+            setTimeout(function() {
+                socket.emit('ping_game_state');
+            }, 100);
         });
+
+        function initializeNavbarScore() {
+            var navbarScore = document.getElementById('navbar-score');
+            if (navbarScore) {
+                var currentScore = '{{score}}';  // Score total du joueur
+                navbarScore.textContent = currentScore;
+                console.log('Initialized navbar score with:', currentScore);
+            }
+        }
+
+        function updateTotalScore(newTotalScore) {
+            console.log('Updating total score to:', newTotalScore);
+            var navbarScore = document.getElementById('navbar-score');
+            if (navbarScore) {
+                navbarScore.textContent = newTotalScore;
+            }
+        }
+
+        function updateQuestionScore(newQuestionScore) {
+            console.log('Updating question score to:', newQuestionScore);
+            var progressBar = document.getElementById('progress-bar');
+            var progressText = document.getElementById('progress-text');
+            var progressScoreDisplay = document.getElementById('progress-score-display');
+            
+            if (progressBar) {
+                progressBar.setAttribute('data-score', newQuestionScore);
+                updateProgressBar();
+            }
+            if (progressText) {
+                progressText.textContent = newQuestionScore + ' pts';
+            }
+            if (progressScoreDisplay) {
+                progressScoreDisplay.textContent = newQuestionScore;
+            }
+        }
+
+        function updateAllScoreDisplays(newTotalScore, newQuestionScore) {
+            console.log('Updating all scores - Total:', newTotalScore, 'Question:', newQuestionScore);
+            updateTotalScore(newTotalScore);
+            if (newQuestionScore !== undefined) {
+                updateQuestionScore(newQuestionScore);
+            }
+        }
+
+        socket.on('game_state_sync', function(data) {
+            console.log('Game state sync received:', data.state, 'at', new Date(data.timestamp * 1000));
+            currentPlayerGameState = data.state; // Mettre à jour la variable d'état
+            updatePlayerInterface(data.state);
+        });
+
+        // Système de heartbeat pour vérifier la synchronisation toutes les 10 secondes
+        setInterval(function() {
+            socket.emit('ping_game_state');
+        }, 10000);
+
+        function updateProgressBar() {
+            var progressBar = document.getElementById('progress-bar');
+            var progressText = document.getElementById('progress-text');
+            var progressScoreDisplay = document.getElementById('progress-score-display');
+            if (progressBar) {
+                var score = parseInt(progressBar.getAttribute('data-score'));
+                if (isNaN(score)) {
+                    score = 0; // Valeur par défaut si pas de score
+                }
+                var maxScore = 55; // Score maximum possible
+                var percentage = Math.min((score / maxScore) * 100, 100);
+                
+                console.log('Progress bar update - Score:', score, 'Percentage:', percentage);
+                
+                // Ajouter animation de mise à jour
+                progressBar.classList.add('updating');
+                setTimeout(function() {
+                    progressBar.classList.remove('updating');
+                }, 600);
+                
+                // Vérifier si on est sur mobile (largeur < 600px)
+                if (window.innerWidth <= 600) {
+                    progressBar.style.width = percentage + '%';
+                    progressBar.style.height = '100%';
+                } else {
+                    progressBar.style.height = percentage + '%';
+                    progressBar.style.width = '100%';
+                }
+                
+                // Mettre à jour tous les textes de score
+                if (progressText) {
+                    progressText.textContent = score + ' pts';
+                }
+                if (progressScoreDisplay) {
+                    progressScoreDisplay.textContent = score;
+                }
+            }
+        }
 
         socket.on('time_out', function(){
             location.reload();
@@ -27,42 +133,511 @@
             for(var i in data['choices']){
                 c = data['choices'][i];
                 document.getElementById('choices').innerHTML +=
-                    '<a href="/choose/{{name}}/' + c + '"><button class="btn btn-primary">' + c + '</button></a>';
+                    '<button class="btn btn-primary" onclick="submitAnswer(\'' + c + '\', this)">' + c + '</button>';
+            }
+            // Mettre à jour les scores du joueur (total et question)
+            if (data['player_scores'] && data['player_scores']['{{name}}'] !== undefined) {
+                var playerTotalScore = data['player_scores']['{{name}}'];
+                console.log('New question - updating total score for {{name}}:', playerTotalScore);
+                updateTotalScore(playerTotalScore);
+            }
+            if (data['question_scores'] && data['question_scores']['{{name}}'] !== undefined) {
+                var playerQuestionScore = data['question_scores']['{{name}}'];
+                console.log('New question - updating question score for {{name}}:', playerQuestionScore);
+                updateQuestionScore(playerQuestionScore);
             }
         });
+
+        // Mettre à jour la barre de progression lors du redimensionnement de la fenêtre
+        window.addEventListener('resize', function() {
+            updateProgressBar();
+        });
+
+        socket.on('game_state_changed', function(data){
+            console.log('Game state changed to:', data.state, 'sync:', data.sync, 'timestamp:', data.timestamp);
+            currentPlayerGameState = data.state; // Mettre à jour la variable d'état
+            updatePlayerInterface(data.state);
+            
+            // Si c'est une synchronisation initiale, afficher un message
+            if (data.sync) {
+                console.log('Initial game state synchronization completed');
+            }
+        });
+
+        socket.on('game_paused', function(){
+            applyPlayerPausedEffect();
+        });
+
+        socket.on('game_resumed', function(){
+            removePlayerPausedEffect();
+        });
+
+        socket.on('game_finished', function(data){
+            showPlayerGameFinishedScreen(data);
+        });
+
+        socket.on('game_reset', function(){
+            location.reload();
+        });
+
+        socket.on('score_update', function(data){
+            // Mettre à jour le score total pour ce joueur spécifique
+            if (data['player_scores'] && data['player_scores']['{{name}}'] !== undefined) {
+                var newTotalScore = data['player_scores']['{{name}}'];
+                console.log('Score update - total score for {{name}}:', newTotalScore);
+                updateTotalScore(newTotalScore);
+            }
+            // Mettre à jour le score de la question pour ce joueur spécifique
+            if (data['question_scores'] && data['question_scores']['{{name}}'] !== undefined) {
+                var newQuestionScore = data['question_scores']['{{name}}'];
+                console.log('Score update - question score for {{name}}:', newQuestionScore);
+                updateQuestionScore(newQuestionScore);
+            }
+        });
+
+        function showPlayerGameFinishedScreen(data) {
+            // Masquer toutes les interfaces
+            document.getElementById('countdown_screen').style.display = 'none';
+            document.getElementById('waiting').style.display = 'none';
+            document.getElementById('question_main').style.display = 'none';
+            
+            // Créer l'écran de fin pour le joueur
+            var finishScreen = document.createElement('div');
+            finishScreen.id = 'player_finish_screen';
+            finishScreen.className = 'text-center';
+            finishScreen.style.marginTop = '30px';
+            
+            var playerScore = data.final_scores.find(score => score[0] === '{{name}}');
+            var playerRank = data.final_scores.findIndex(score => score[0] === '{{name}}') + 1;
+            var isWinner = data.winner && data.winner.name === '{{name}}';
+            
+            finishScreen.innerHTML = `
+                <h1 class="mb-4" style="color: #ffd700;">
+                    <i class="fa-solid fa-flag-checkered"></i> Jeu Terminé !
+                </h1>
+                ${isWinner ? `
+                    <h2 class="mb-4" style="color: #4CAF50;">
+                        🏆 Félicitations ! Vous avez gagné !
+                    </h2>
+                ` : `
+                    <h3 class="mb-3" style="color: #fff;">
+                        Vous êtes ${playerRank}${playerRank === 1 ? 'er' : 'ème'} !
+                    </h3>
+                `}
+                <div class="alert alert-info mb-4">
+                    <h4>Votre score final: ${playerScore ? playerScore[1] : 0} points</h4>
+                </div>
+                <p class="lead mb-4" style="color: #fff;">${data.message}</p>
+                <div class="mb-4">
+                    <h4 style="color: #ffd700;">Classement final:</h4>
+                    <div style="max-width: 300px; margin: 0 auto;">
+                        ${data.final_scores.slice(0, 3).map((score, index) => `
+                            <div class="alert ${score[0] === '{{name}}' ? 'alert-warning' : 'alert-secondary'} p-2 mb-2">
+                                ${index + 1}. ${score[0]} - ${score[1]} pts
+                                ${index === 0 ? ' 🏆' : index === 1 ? ' 🥈' : index === 2 ? ' 🥉' : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-lg" onclick="goToHome()">
+                    <i class="fa-solid fa-home"></i> Retour à l'accueil
+                </button>
+            `;
+            
+            document.body.appendChild(finishScreen);
+        }
+
+        function goToHome() {
+            window.location.href = '/';
+        }
+
+        socket.on('answer_feedback', function(data){
+            // Vérifier si la notification est pour ce joueur
+            if (data.player === '{{name}}') {
+                showAnswerNotification(data);
+                // Gérer l'effet visuel sur le bouton selon la réponse
+                if (window.lastClickedButton) {
+                    if (data.is_correct) {
+                        highlightCorrectButton(window.lastClickedButton);
+                    } else {
+                        hideWrongButton(window.lastClickedButton);
+                    }
+                }
+            }
+        });
+
+        function showAnswerNotification(data) {
+            var notification = document.getElementById('answer-notification');
+            var content = document.getElementById('notification-content');
+            
+            // Configurer le contenu et le style (utiliser innerHTML pour les icônes)
+            content.innerHTML = data.message;
+            notification.className = 'answer-notification ' + data.type;
+            
+            // Afficher la notification
+            setTimeout(function() {
+                notification.classList.add('show');
+            }, 100);
+            
+            // Masquer après 4 secondes
+            setTimeout(function() {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        function submitAnswer(answer, buttonElement) {
+            // Stocker une référence au bouton cliqué pour un traitement ultérieur
+            window.lastClickedButton = buttonElement;
+            
+            // Désactiver le bouton cliqué pour éviter les clics multiples
+            buttonElement.disabled = true;
+            
+            // Envoyer la réponse via fetch (AJAX)
+            fetch('/choose/{{name}}/' + answer, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(function(response) {
+                return response.json();
+            }).then(function(data) {
+                // La notification sera affichée via Socket.IO
+                // Réactiver le bouton après un court délai seulement si la réponse n'était pas incorrecte
+                setTimeout(function() {
+                    // Le bouton sera soit réactivé soit masqué selon la réponse
+                    if (buttonElement.style.display !== 'none') {
+                        buttonElement.disabled = false;
+                    }
+                }, 1000);
+            }).catch(function(error) {
+                console.error('Erreur:', error);
+                // Réactiver le bouton en cas d'erreur
+                buttonElement.disabled = false;
+            });
+        }
+
+        function hideWrongButton(buttonElement) {
+            // Ajouter la classe CSS pour l'animation de disparition
+            buttonElement.classList.add('btn-wrong-answer');
+            
+            // Masquer complètement après l'animation
+            setTimeout(function() {
+                buttonElement.style.display = 'none';
+            }, 300);
+        }
+
+        function highlightCorrectButton(buttonElement) {
+            // Ajouter la classe CSS pour mettre en évidence la bonne réponse
+            buttonElement.classList.add('btn-correct-answer');
+            
+            // Remettre le style normal après 2 secondes
+            setTimeout(function() {
+                buttonElement.classList.remove('btn-correct-answer');
+            }, 2000);
+        }
+
+        function applyPlayerPausedEffect() {
+            var image = document.getElementById('qimage');
+            if (image) {
+                image.classList.add('paused-image');
+                
+                // Ajouter overlay de pause
+                var container = image.parentElement;
+                if (!document.getElementById('player-pause-overlay')) {
+                    var overlay = document.createElement('div');
+                    overlay.id = 'player-pause-overlay';
+                    overlay.className = 'paused-overlay';
+                    overlay.innerHTML = '<i class="fa-solid fa-pause"></i> JEU EN PAUSE';
+                    container.style.position = 'relative';
+                    container.appendChild(overlay);
+                }
+            }
+            
+            // Désactiver tous les boutons de choix
+            var buttons = document.querySelectorAll('#choices .btn-primary');
+            buttons.forEach(function(button) {
+                button.disabled = true;
+                button.style.pointerEvents = 'none';
+            });
+        }
+
+        function removePlayerPausedEffect() {
+            var image = document.getElementById('qimage');
+            if (image) {
+                image.classList.remove('paused-image');
+                
+                // Supprimer overlay de pause
+                var overlay = document.getElementById('player-pause-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+            
+            // Réactiver tous les boutons de choix
+            var buttons = document.querySelectorAll('#choices .btn-primary');
+            buttons.forEach(function(button) {
+                button.disabled = false;
+                button.style.pointerEvents = 'auto';
+            });
+        }
+
+        socket.on('countdown_update', function(data){
+            if (document.getElementById('countdown_number')) {
+                document.getElementById('countdown_number').innerHTML = data['count'];
+            }
+        });
+
+        socket.on('recharging_countdown', function(data){
+            if (document.getElementById('recharging_countdown')) {
+                document.getElementById('recharging_countdown').innerHTML = data['count'];
+            }
+        });
+
+        socket.on('show_correct_answer', function(data){
+            var display = document.getElementById('correct_answer_display');
+            if (display) {
+                display.innerHTML = data['message'];
+            }
+        });
+
+        socket.on('hide_other_choices', function(data){
+            // Si c'est pour ce joueur, masquer toutes les options sauf la bonne réponse
+            if (data.player === '{{name}}') {
+                var buttons = document.querySelectorAll('#choices .btn-primary');
+                buttons.forEach(function(button) {
+                    if (button.textContent.trim() !== data.correct_answer) {
+                        button.style.display = 'none';
+                    } else {
+                        // Mettre en évidence la bonne réponse
+                        button.classList.add('btn-correct-answer');
+                        button.disabled = true;
+                    }
+                });
+            }
+        });
+
+        socket.on('force_disconnect', function(){
+            console.log('Game ended - disconnecting...');
+            socket.disconnect();
+            setTimeout(function() {
+                window.location.href = '/';
+            }, 2000);
+        });
+
+        function updatePlayerInterface(state) {
+            console.log('Updating player interface to state:', state);
+            
+            if (state === 'waiting') {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('waiting').style.display = 'block';
+                document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+            } else if (state === 'loading') {
+                document.getElementById('countdown_screen').style.display = 'block';
+                document.getElementById('waiting').style.display = 'none';
+                document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+            } else if (state === 'in_progress') {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+                // Vérifier s'il y a une question active
+                var questionImg = document.getElementById('qimage');
+                var choices = document.getElementById('choices');
+                var hasActiveQuestion = questionImg && questionImg.src && 
+                                      !questionImg.src.endsWith('/.png') && 
+                                      !questionImg.src.endsWith('/static/movies/.png') &&
+                                      choices && choices.children.length > 0;
+                
+                if (hasActiveQuestion || '{{img}}' !== '') {
+                    document.getElementById('waiting').style.display = 'none';
+                    document.getElementById('question_main').style.display = 'block';
+                } else {
+                    document.getElementById('waiting').style.display = 'block';
+                    document.getElementById('question_main').style.display = 'none';
+                }
+            } else if (state === 'recharging') {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('waiting').style.display = 'none';
+                document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'block';
+            } else if (state === 'paused') {
+                // Appliquer l'effet de pause
+                applyPlayerPausedEffect();
+            } else if (state === 'finished') {
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('waiting').style.display = 'none';
+                document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+            } else {
+                // État par défaut
+                document.getElementById('countdown_screen').style.display = 'none';
+                document.getElementById('waiting').style.display = 'block';
+                document.getElementById('question_main').style.display = 'none';
+                document.getElementById('recharging_screen').style.display = 'none';
+            }
+            
+            // Si on sort de pause, retirer l'effet
+            if (state !== 'paused') {
+                removePlayerPausedEffect();
+            }
+        }
     </script>
 </head>
 <body>
+    <!-- Notification de réponse -->
+    <div id="answer-notification" class="answer-notification">
+        <div id="notification-content"></div>
+    </div>
+
     <nav class="navbar navbar-expand-sm">
       <div class="container-fluid">
         <ul class="navbar-nav">
-          <li class="nav-item">
-            <i class="fa-solid fa-user"></i> <b>{{name}}</b>
+          <li class="nav-item d-flex align-items-center">
+            {% if avatar %}
+          <img src="{{ url_for('static', filename='avatars/' + avatar) }}" 
+              alt="Avatar" 
+              class="player-avatar me-2" 
+              data-player-name="{{name}}"
+              style="width: 48px; height: 48px; border-radius: 50%; cursor: pointer;"
+              title="Voir mon profil"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+            <i class="fa-solid fa-user me-2" style="display: none;"></i>
+            {% else %}
+            <i class="fa-solid fa-user me-2"></i>
+            {% endif %}
+            <b>{{name}}</b>
           </li>
           <li class="nav-item">
-             &nbsp;| <i class="fa-solid fa-star"></i> Score <b>{{score}}</b>
+             &nbsp;| <i class="fa-solid fa-star"></i> Score <b id="navbar-score">{{score}}</b>
           </li>
-          {% if choix|length > 1 %}
-          <li class="nav-item">
-            &nbsp;| <i class="fa-solid fa-coins"></i> Question value {{qscore}}
-          </li>
-          {% endif %}
         </ul>
       </div>
     </nav>
+    
+    <!-- Écran de compte à rebours -->
+    <div id="countdown_screen" class="text-center" style="display: none; margin-top: 50px;">
+        <h1 class="mb-4" style="color: #ffd700;"><i class="fa-solid fa-clock"></i> Le jeu commence dans...</h1>
+        <div id="countdown_number" class="display-1 text-warning mb-4" style="font-size: 6rem; font-weight: bold; text-shadow: 3px 3px 6px #000;">5</div>
+        <p class="lead" style="color: #fff;">Préparez-vous {{name}} !</p>
+    </div>
+    
+    <!-- Écran de recharging -->
+    <div id="recharging_screen" class="text-center" style="display: none; margin-top: 50px;">
+        <h1 class="mb-4" style="color: #ffd700;"><i class="fa-solid fa-refresh"></i> Préparation question suivante...</h1>
+        <div id="correct_answer_display" class="mb-4" style="color: #4CAF50; font-size: 1.5rem; font-weight: bold;"></div>
+        <div id="recharging_countdown" class="display-1 text-info mb-4" style="font-size: 4rem; font-weight: bold; text-shadow: 3px 3px 6px #000;">5</div>
+        <p class="lead" style="color: #fff;">Prochaine question dans...</p>
+    </div>
+    
     <div id="waiting" {% if img != "" %} style="display:none;" {%endif%}>
         <span>En attente des autres joueurs...</span> <div class="spinner-border" role="status"></div>
     </div>
     <div id='question_main' class="mx-auto justify-content-center" {% if img == "" %} style="display:none;" {%endif%}>
         <div class="img-container">
-            <img class="qimage" id="qimage" src="/static/movies/{{img}}.png" alt="Question" />
-            <div class="bottomright" id="score">{{qscore}} points</div>
+            <div class="progress-container">
+                <div class="progress-text" id="progress-text">{{qscore}} pts</div>
+                <div class="progress-bar-vertical" id="progress-bar" data-score="{{qscore}}">
+                    <span class="progress-score-text" id="progress-score-display">{{qscore}}</span>
+                </div>
+                <div class="progress-label">Score</div>
+            </div>
+            <div style="position: relative;">
+                <img class="qimage" id="qimage" src="/static/movies/{{img}}.png" alt="Question" />
+            </div>
         </div>
         <div id="choices">
         {% for c in choix %}
-           <a href="/choose/{{name}}/{{c}}"><button class="btn btn-primary">{{c}}</button></a>
+           <button class="btn btn-primary" onclick="submitAnswer('{{c}}', this)">{{c}}</button>
         {% endfor %}
         </div>
     </div>
+
+<!-- Carte modale pour le profil joueur -->
+<div id="playerProfileCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:400px; z-index:9999; max-width:500px;">
+  <div class="card-header bg-primary text-white text-center">
+    <span id="cardPlayerName" style="font-weight:bold;"></span>
+    <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerProfileCard()"></button>
+  </div>
+  <div class="card-body text-center">
+    <div class="mb-3">
+      <img id="cardPlayerAvatar" src="" alt="Avatar" style="width:150px; height:150px; border-radius:50%; border: 3px solid #0d6efd;">
+    </div>
+    <div class="row mb-3">
+      <div class="col-6">
+        <div class="card bg-light">
+          <div class="card-body p-2">
+            <h6 class="card-title mb-1">Score</h6>
+            <h4 class="text-primary mb-0" id="cardPlayerScore">0</h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="card bg-light">
+          <div class="card-body p-2">
+            <h6 class="card-title mb-1">Classement</h6>
+            <h4 class="text-success mb-0" id="cardPlayerRanking">#1</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mb-3">
+      <h6>QR Code</h6>
+      <div class="qr-bg d-inline-block">
+        <img id="cardPlayerQR" src="" style="width:120px;">
+      </div>
+    </div>
+  </div>
+</div>
+<div id="cardProfileOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9998;" onclick="closePlayerProfileCard()"></div>
+
+<script>
+  // Fonctionnalité de carte de profil joueur
+  function attachAvatarClickHandlers() {
+    document.querySelectorAll('.player-avatar').forEach(function(avatar) {
+      avatar.addEventListener('click', function(e) {
+        e.preventDefault();
+        const playerName = this.getAttribute('data-player-name');
+        showPlayerProfileCard(playerName);
+      });
+    });
+  }
+
+  function showPlayerProfileCard(playerName) {
+    // Récupérer les détails du joueur via API
+    fetch(`/api/player-details/${playerName}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          console.error('Erreur:', data.error);
+          return;
+        }
+        
+        // Remplir la carte avec les données
+        document.getElementById('cardPlayerName').textContent = data.name;
+        document.getElementById('cardPlayerAvatar').src = `/static/avatars/${data.avatar}`;
+        document.getElementById('cardPlayerScore').textContent = data.score;
+        document.getElementById('cardPlayerRanking').textContent = `#${data.ranking}`;
+        document.getElementById('cardPlayerQR').src = data.qrcode;
+        
+        // Afficher la carte
+        document.getElementById('playerProfileCard').style.display = 'block';
+        document.getElementById('cardProfileOverlay').style.display = 'block';
+      })
+      .catch(error => {
+        console.error('Erreur lors de la récupération des détails du joueur:', error);
+      });
+  }
+
+  function closePlayerProfileCard() {
+    document.getElementById('playerProfileCard').style.display = 'none';
+    document.getElementById('cardProfileOverlay').style.display = 'none';
+  }
+
+  // Attacher les gestionnaires d'événements au chargement de la page
+  document.addEventListener('DOMContentLoaded', function() {
+    attachAvatarClickHandlers();
+  });
+</script>
+
 </body>
 </html>
