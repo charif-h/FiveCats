@@ -8,107 +8,131 @@
     <link href="{{ url_for('static', filename='css/index.css') }}" rel="stylesheet">
 </head>
 <body>
-    <div class="container p-3 my-3 border d-flex align-items-center">
-        <div class="me-3 logo-container">
-            <img id="logo" src="static/logo-cat.png" alt="5 Cats Game Logo">
-        </div>
-        <div class="options-container">
-            <h1 class="options-title"><i class="fa-solid fa-cat"></i> Options </h1>
-            <form method="POST" action="/game" target="_blank" class="mt-2">
-                <span class="form-row row">
-                    <span class="col-4">
-                    <i class="fa-solid fa-list-ol"></i>
-                    Nombre de choix par question</span>
-                    <input type="number" name="choices" value="10" min="4" max="10" class="form-control d-inline w-auto mx-2 col-1 form-input choices-input" maxlength="3">
-                </span>
-                <br>
-                <span class="form-row row">
-                    <span class="col-4"><i class="fa-solid fa-clock"></i>
-                    Temps par question</span>
-                    <input type="number" name="Timer" value="60" min="10" max="360" class="form-control d-inline w-auto mx-2 col-1 form-input"> sec
-                </span>
-                <br>
-                <span class="form-row row">
-                    <span class="col-4"><i class="fa-solid fa-question" ></i>
-                    Nombre total de questions</span>
-                    <input type="number" name="total" value="0" min="0" max="100" class="form-control d-inline w-auto mx-2 col-1 form-input">
-                </span>
-                <br>
-                <button type="submit" name="start" value="start" class="btn btn-primary mt-2 start-button" {% if players|length == 0 %} disabled {%endif%}>
-                    <i class="fa-solid fa-play"></i> Go
-                </button>
-                <!-- Bouton visible temporairement pour test - normalement affiché seulement si game_state in ['loading', 'in_progress', 'paused'] -->
-                <button type="button" class="btn btn-danger mt-2 ms-2" style="font-size:1rem; padding:6px 18px;" onclick="terminateGame()">
-                    <i class="fa-solid fa-stop"></i> Terminer le jeu
-                </button>
-            </form>
-        </div>
-    </div>
-    <div class="container p-5 my-5 border">
-        <h1><i class="fa-solid fa-users"></i> Liste des joueurs</h1>
-        {% if error %}
-          <div class="alert alert-danger" role="alert">
-            {{ error }}
-          </div>
-        {% endif %}
-        <form method="POST" action="/addplayer" class="mb-4">
-            <label for="player_name"><i class="fa-solid fa-user-plus"></i> Nom du joueur</label>
-            <input id="player_name" name="player_name" type="text" class="form-control d-inline w-auto mx-2"/>
-            <button type="submit" name="addp" value="addp" class="btn btn-primary">
-                <i class="fa-solid fa-plus"></i> Ajouter
-            </button>
-        </form>
-        <table class="table table-striped">
-            <thead>
-              <tr>
-                <th><i class="fa-solid fa-user"></i> Joueur</th>
-                <th><i class="fa-solid fa-star"></i> Score</th>
-                <th><i class="fa-solid fa-qrcode"></i> QR Code</th>
-                <th><i class="fa-solid fa-trash"></i> Supprimer</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in players %}
-              <tr>
-                <td>
-                  <div class="d-flex align-items-center">
-                    {% if r[2] %}
-        <img src="{{ url_for('static', filename='avatars/' + r[2]) }}" 
-          alt="Avatar" 
-          class="player-avatar me-2" 
-          data-player-name="{{ r[0] }}"
-          style="width: 48px; height: 48px; border-radius: 50%; cursor: pointer;"
-          title="Voir le profil de {{ r[0] }}"
-          onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-        <i class="fa-solid fa-user me-2" style="display: none; width: 48px; text-align: center;"></i>
-                    {% else %}
-        <i class="fa-solid fa-user me-2" style="width: 48px; text-align: center;"></i>
+    <div class="container-fluid p-3 my-3">
+        <div class="row gx-4">
+            <!-- Colonne de gauche : Options -->
+            <div class="col-4">
+                <div class="options-panel p-4 border">
+                    <!-- Logo en haut -->
+                    <div class="text-center mb-4">
+                        <img id="logo" src="static/logo-cat.png" alt="5 Cats Game Logo">
+                    </div>
+                    
+                    <!-- Options en dessous -->
+                    <div class="options-container">
+                        <h1 class="options-title text-center mb-4"><i class="fa-solid fa-cat"></i> Options </h1>
+                        <form method="POST" action="/game" target="_blank" class="mt-2">
+                            <div class="form-group mb-3">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-list-ol"></i> Nombre de choix par question
+                                </label>
+                                <input type="number" name="choices" value="10" min="4" max="10" class="form-control form-input choices-input" maxlength="3">
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-clock"></i> Temps par question (sec)
+                                </label>
+                                <input type="number" name="Timer" value="60" min="10" max="360" class="form-control form-input">
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-question"></i> Nombre total de questions
+                                </label>
+                                <input type="number" name="total" value="0" min="0" max="100" class="form-control form-input">
+                            </div>
+                            
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" name="start" value="start" class="btn btn-primary start-button" {% if players|length == 0 %} disabled {%endif%}>
+                                    <i class="fa-solid fa-play"></i> Go
+                                </button>
+                                <!-- Bouton visible temporairement pour test - normalement affiché seulement si game_state in ['loading', 'in_progress', 'paused'] -->
+                                <button type="button" class="btn btn-danger" onclick="terminateGame()">
+                                    <i class="fa-solid fa-stop"></i> Terminer le jeu
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Colonne de droite : Liste des joueurs -->
+            <div class="col-8">
+                <div class="players-panel p-4 border">
+                    <h1><i class="fa-solid fa-users"></i> Liste des joueurs</h1>
+                    {% if error %}
+                      <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                      </div>
                     {% endif %}
-                    <a href="/player/{{ r[0] }}" target="_blank" class="text-decoration-none">
-                      {{ r[0] }}
-                    </a>
-                  </div>
-                </td>
-                <td>{{ r[1] }}</td>
-                <td>
-                    <a href="#" class="player-link" data-name="{{ r[0] }}" data-qr="static/players/{{ r[0] }}.svg" title="Voir le QR code de {{ r[0] }}">
-                       <span class="qr-bg">
-                          <img src="static/players/{{ r[0] }}.svg" alt="QR code">
-                      </span>
-                    </a>
-                </td>
-                <td>
-                  <form method="POST" action="/deleteplayer" class="delete-form">
-                    <input type="hidden" name="player_name" value="{{ r[0] }}">
-                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer {{ r[0] }}">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
-                  </form>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                    <form method="POST" action="/addplayer" class="mb-4">
+                        <div class="row align-items-end">
+                            <div class="col-8">
+                                <label for="player_name" class="form-label"><i class="fa-solid fa-user-plus"></i> Nom du joueur</label>
+                                <input id="player_name" name="player_name" type="text" class="form-control"/>
+                            </div>
+                            <div class="col-4">
+                                <button type="submit" name="addp" value="addp" class="btn btn-primary w-100">
+                                    <i class="fa-solid fa-plus"></i> Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <table class="table table-striped">
+                        <thead>
+                          <tr>
+                            <th><i class="fa-solid fa-user"></i> Joueur</th>
+                            <th><i class="fa-solid fa-star"></i> Score</th>
+                            <th><i class="fa-solid fa-qrcode"></i> QR Code</th>
+                            <th><i class="fa-solid fa-trash"></i> Supprimer</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for r in players %}
+                          <tr>
+                            <td>
+                              <div class="d-flex align-items-center">
+                                {% if r[2] %}
+            <img src="{{ url_for('static', filename='avatars/' + r[2]) }}" 
+              alt="Avatar" 
+              class="player-avatar me-2" 
+              data-player-name="{{ r[0] }}"
+              style="width: 48px; height: 48px; border-radius: 50%; cursor: pointer;"
+              title="Voir le profil de {{ r[0] }}"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+            <i class="fa-solid fa-user me-2" style="display: none; width: 48px; text-align: center;"></i>
+                                {% else %}
+            <i class="fa-solid fa-user me-2" style="width: 48px; text-align: center;"></i>
+                                {% endif %}
+                                <a href="/player/{{ r[0] }}" target="_blank" class="text-decoration-none">
+                                  {{ r[0] }}
+                                </a>
+                              </div>
+                            </td>
+                            <td>{{ r[1] }}</td>
+                            <td>
+                                <a href="#" class="player-link" data-name="{{ r[0] }}" data-qr="static/players/{{ r[0] }}.svg" title="Voir le QR code de {{ r[0] }}">
+                                   <span class="qr-bg">
+                                      <img src="static/players/{{ r[0] }}.svg" alt="QR code">
+                                  </span>
+                                </a>
+                            </td>
+                            <td>
+                              <form method="POST" action="/deleteplayer" class="delete-form">
+                                <input type="hidden" name="player_name" value="{{ r[0] }}">
+                                <button type="submit" class="btn btn-danger btn-sm" title="Supprimer {{ r[0] }}">
+                                  <i class="fa-solid fa-trash"></i>
+                                </button>
+                              </form>
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Card modal for player info -->
