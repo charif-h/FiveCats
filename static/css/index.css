@@ -104,6 +104,17 @@ th, td {
     display: inline-block;
 }
 
+/* QR codes dans le tableau - plus petits */
+.table .qr-bg {
+    padding: 3px;
+    border: 1px solid #ffd700;
+}
+
+.table .qr-bg img {
+    width: 30px;
+    height: 30px;
+}
+
 /* Styles pour les avatars */
 .player-avatar {
     transition: transform 0.2s ease, box-shadow 0.2s ease;

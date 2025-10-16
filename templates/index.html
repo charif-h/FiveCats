@@ -136,30 +136,109 @@
     </div>
 
     <!-- Card modal for player info -->
-<div id="playerCard" class="card text-dark">
-  <div class="card-header bg-warning text-center">
-    <span id="cardPlayerName"></span>
-    <button type="button" class="btn-close float-end" aria-label="Close" onclick="closePlayerCard()"></button>
+<div id="playerCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:450px; z-index:9999; max-width:550px;">
+  <div class="card-header bg-primary text-white text-center">
+    <span id="cardPlayerName" style="font-weight:bold; font-size:1.2rem;"></span>
+    <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerCard()"></button>
   </div>
   <div class="card-body text-center">
-    <span class="qr-bg">
-      <img id="cardPlayerQR" src="" alt="Player QR code">
-    </span>
+    <!-- Avatar et Score côte à côte -->
+    <div class="row mb-4 align-items-center">
+      <div class="col-6 text-center">
+        <img id="cardPlayerAvatar" src="" alt="Avatar" style="width:120px; height:120px; border-radius:50%; border: 3px solid #0d6efd; object-fit: cover;">
+        <i id="cardPlayerDefaultAvatar" class="fa-solid fa-user" style="display: none; font-size: 80px; color: #6c757d;"></i>
+      </div>
+      <div class="col-6">
+        <div class="card bg-light h-100 d-flex justify-content-center align-items-center">
+          <div class="card-body p-3 text-center">
+            <h6 class="card-title mb-2 text-muted">Score</h6>
+            <h2 class="text-primary mb-0" id="cardPlayerScore">0</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- QR Code plus grand -->
+    <div class="mb-2">
+      <h6 class="text-muted mb-3">QR Code</h6>
+      <div class="qr-bg d-inline-block">
+        <img id="cardPlayerQR" src="" alt="Player QR code" style="width:200px; height:200px;">
+      </div>
+    </div>
   </div>
 </div>
-<div id="cardOverlay" onclick="closePlayerCard()"></div>
+<div id="cardOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9998;" onclick="closePlayerCard()"></div>
 
 <script>
-  // Ouvre la carte au clic sur le nom du joueur
+  // Fonction pour afficher la carte du joueur
+  function showPlayerCard(playerName, playerScore, playerAvatar, playerQR) {
+    // Remplir les informations de la carte
+    document.getElementById('cardPlayerName').textContent = playerName;
+    document.getElementById('cardPlayerScore').textContent = playerScore;
+    document.getElementById('cardPlayerQR').src = playerQR;
+    
+    // Gérer l'avatar
+    const avatarImg = document.getElementById('cardPlayerAvatar');
+    const defaultAvatar = document.getElementById('cardPlayerDefaultAvatar');
+    
+    if (playerAvatar && playerAvatar !== '') {
+      avatarImg.src = `/static/avatars/${playerAvatar}`;
+      avatarImg.style.display = 'block';
+      defaultAvatar.style.display = 'none';
+      
+      // Gérer le cas où l'image n'existe pas
+      avatarImg.onerror = function() {
+        this.style.display = 'none';
+        defaultAvatar.style.display = 'block';
+      };
+    } else {
+      avatarImg.style.display = 'none';
+      defaultAvatar.style.display = 'block';
+    }
+    
+    // Afficher la carte et l'overlay
+    document.getElementById('playerCard').style.display = 'block';
+    document.getElementById('cardOverlay').style.display = 'block';
+  }
+
+  // Ouvre la carte au clic sur le QR code
   document.querySelectorAll('.player-link').forEach(function(link){
     link.addEventListener('click', function(e){
       e.preventDefault();
-      document.getElementById('cardPlayerName').textContent = this.dataset.name;
-      document.getElementById('cardPlayerQR').src = this.dataset.qr;
-      document.getElementById('playerCard').style.display = 'block';
-      document.getElementById('cardOverlay').style.display = 'block';
+      const playerName = this.dataset.name;
+      const playerQR = this.dataset.qr;
+      
+      // Récupérer les informations du joueur depuis la ligne du tableau
+      const row = this.closest('tr');
+      const playerScore = row.cells[1].textContent.trim();
+      
+      // Récupérer l'avatar depuis l'image de la première cellule
+      const avatarImg = row.querySelector('.player-avatar');
+      const playerAvatar = avatarImg ? avatarImg.src.split('/').pop() : '';
+      
+      showPlayerCard(playerName, playerScore, playerAvatar, playerQR);
     });
   });
+
+  // Ouvre la carte au clic sur l'avatar
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('player-avatar')) {
+      e.preventDefault();
+      const playerName = e.target.getAttribute('data-player-name');
+      
+      // Récupérer les informations du joueur depuis la ligne du tableau
+      const row = e.target.closest('tr');
+      const playerScore = row.cells[1].textContent.trim();
+      const playerAvatar = e.target.src.split('/').pop();
+      
+      // Récupérer le QR code depuis le lien dans la même ligne
+      const qrLink = row.querySelector('.player-link');
+      const playerQR = qrLink ? qrLink.dataset.qr : '';
+      
+      showPlayerCard(playerName, playerScore, playerAvatar, playerQR);
+    }
+  });
+  
   // Ferme la carte
   function closePlayerCard(){
     document.getElementById('playerCard').style.display = 'none';
@@ -183,93 +262,7 @@
       form.submit();
     }
   }
-
-  // Fonctionnalité de carte de profil joueur
-  function attachAvatarClickHandlers() {
-    document.querySelectorAll('.player-avatar').forEach(function(avatar) {
-      avatar.addEventListener('click', function(e) {
-        e.preventDefault();
-        const playerName = this.getAttribute('data-player-name');
-        showPlayerProfileCard(playerName);
-      });
-    });
-  }
-
-  function showPlayerProfileCard(playerName) {
-    // Récupérer les détails du joueur via API
-    fetch(`/api/player-details/${playerName}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
-          console.error('Erreur:', data.error);
-          return;
-        }
-        
-        // Remplir la carte avec les données
-        document.getElementById('cardPlayerName').textContent = data.name;
-        document.getElementById('cardPlayerAvatar').src = `/static/avatars/${data.avatar}`;
-        document.getElementById('cardPlayerScore').textContent = data.score;
-        document.getElementById('cardPlayerRanking').textContent = `#${data.ranking}`;
-        document.getElementById('cardPlayerQR').src = data.qrcode;
-        
-        // Afficher la carte
-        document.getElementById('playerProfileCard').style.display = 'block';
-        document.getElementById('cardProfileOverlay').style.display = 'block';
-      })
-      .catch(error => {
-        console.error('Erreur lors de la récupération des détails du joueur:', error);
-      });
-  }
-
-  function closePlayerProfileCard() {
-    document.getElementById('playerProfileCard').style.display = 'none';
-    document.getElementById('cardProfileOverlay').style.display = 'none';
-  }
-
-  // Attacher les gestionnaires d'événements au chargement de la page
-  document.addEventListener('DOMContentLoaded', function() {
-    attachAvatarClickHandlers();
-  });
 </script>
-
-<!-- Carte modale pour le profil joueur -->
-<div id="playerProfileCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:400px; z-index:9999; max-width:500px;">
-  <div class="card-header bg-primary text-white text-center">
-    <span id="cardPlayerName" style="font-weight:bold;"></span>
-    <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerProfileCard()"></button>
-  </div>
-  <div class="card-body text-center">
-    <div class="mb-3">
-      <img id="cardPlayerAvatar" src="" alt="Avatar" style="width:150px; height:150px; border-radius:50%; border: 3px solid #0d6efd;">
-    </div>
-    <div class="row mb-3">
-      <div class="col-6">
-        <div class="card bg-light">
-          <div class="card-body p-2">
-            <h6 class="card-title mb-1">Score</h6>
-            <h4 class="text-primary mb-0" id="cardPlayerScore">0</h4>
-          </div>
-        </div>
-      </div>
-      <div class="col-6">
-        <div class="card bg-light">
-          <div class="card-body p-2">
-            <h6 class="card-title mb-1">Classement</h6>
-            <h4 class="text-success mb-0" id="cardPlayerRanking">#1</h4>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="mb-3">
-      <h6>QR Code</h6>
-      <div class="qr-bg d-inline-block">
-        <img id="cardPlayerQR" src="" style="width:120px;">
-      </div>
-    </div>
-  </div>
-</div>
-<div id="cardProfileOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9998;" onclick="closePlayerProfileCard()"></div>
-
 </script>
 </body>
 </html>
