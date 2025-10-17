@@ -11,8 +11,11 @@ socketio = SocketIO(app)
 players = []
 imgs = []
 choices = 10
-Timer = choices*6
+Timer = 30
 total = 0
+end_mode = 'questions'  # 'questions' or 'points'
+max_points = 500
+questions_asked = 0  # Counter for questions asked
 game_state = 'waiting'
 previous_state = None  # Pour mémoriser l'état avant pause
 
@@ -57,12 +60,18 @@ def session():
     global choices
     global Timer
     global total
+    global end_mode
+    global max_points
+    global questions_asked
     set_game_state('loading')  # Utiliser la fonction centralisée
     choices = int(request.form['choices'])
     Timer = int(request.form['Timer'])
     total = int(request.form['total'])
+    end_mode = request.form.get('end_mode', 'questions')
+    max_points = int(request.form.get('max_points', 500))
+    questions_asked = 0  # Reset question counter
 
-    if total == 0:
+    if total == 0 and end_mode == 'questions':
         total = len(imgs)
 
     scores = []
@@ -162,6 +171,18 @@ def choose(token, answer):
     player = next((x for x in players if x.name == token), None)
     points_earned = question.check_answer(player.name, answer)
     player.score += points_earned
+    
+    # Vérifier si le joueur a atteint le score cible
+    if end_mode == 'points' and player.score >= max_points:
+        # Le joueur a atteint le score cible - terminer le jeu
+        socketio.emit('end_game', {
+            'reason': 'target_reached',
+            'final_scores': players_to_table(False),
+            'winner': {'name': player.name, 'score': player.score},
+            'message': f'{player.name} a atteint le score cible de {max_points} points !'
+        })
+        set_game_state('finished')
+        return jsonify({'status': 'game_ended', 'reason': 'target_reached'})
     
     # Déterminer si la réponse est correcte et envoyer une notification via Socket.IO
     is_correct = points_earned > 0
@@ -385,12 +406,15 @@ def handle_disconnect():
 
 @socketio.on('reset_game')
 def handle_reset_game():
-    global players, imgs, question
+    global players, imgs, question, questions_asked
     set_game_state('waiting')
     
     # Réinitialiser les scores des joueurs
     for player in players:
         player.score = 0
+    
+    # Réinitialiser le compteur de questions
+    questions_asked = 0
     
     # Recharger les images
     imgs = os.listdir('static/movies')
@@ -451,17 +475,36 @@ def get_player_details():
     return players_details
 
 def newQuestion():
-    global question, game_state
+    global question, game_state, questions_asked
+    
+    # Vérifier si on a atteint la limite de questions en mode questions
+    if end_mode == 'questions' and questions_asked >= total:
+        print(f'Question limit reached ({questions_asked}/{total}) - ending game')
+        socketio.emit('end_game', {
+            'reason': 'no_more_images',
+            'final_scores': players_to_table(False),
+            'winner': get_winner() if players else None,
+            'message': f'Toutes les {total} questions ont été posées !'
+        })
+        set_game_state('finished')
+        return
     
     # Vérifier s'il reste des images
     if len(imgs) == 0:
         print('No more images available - ending game')
-        socketio.emit('end_game', {'reason': 'no_more_images'})
+        socketio.emit('end_game', {
+            'reason': 'no_more_images',
+            'final_scores': players_to_table(False),
+            'winner': get_winner() if players else None,
+            'message': 'Toutes les images ont été utilisées !'
+        })
+        set_game_state('finished')
         return
     
     question = Question(imgs, players, choices)
     imgs.remove(question.image)
-    print(question.choices_to_json())
+    questions_asked += 1  # Increment question counter
+    print(f'Question {questions_asked}/{total if end_mode == "questions" else "∞"} - {question.choices_to_json()}')
     
     # Calculer les scores pour chaque joueur
     player_total_scores = {}

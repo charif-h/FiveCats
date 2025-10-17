@@ -26,14 +26,14 @@
                                 <label class="form-label d-block mb-2">
                                     <i class="fa-solid fa-list-ol"></i> Nombre de choix par question
                                 </label>
-                                <input type="number" name="choices" value="10" min="4" max="10" class="form-control form-input choices-input" maxlength="3">
+                                <input type="number" name="choices" value="10" min="2" max="15" class="form-control form-input choices-input" maxlength="3">
                             </div>
                             
                             <div class="form-group mb-3">
                                 <label class="form-label d-block mb-2">
                                     <i class="fa-solid fa-clock"></i> Temps par question (sec)
                                 </label>
-                                <input type="number" name="Timer" value="60" min="10" max="360" class="form-control form-input">
+                                <input type="number" name="Timer" value="30" min="10" max="90" class="form-control form-input">
                             </div>
                             
                             <div class="form-group mb-3">
@@ -41,6 +41,23 @@
                                     <i class="fa-solid fa-question"></i> Nombre total de questions
                                 </label>
                                 <input type="number" name="total" value="0" min="0" max="100" class="form-control form-input">
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-trophy"></i> Mode de fin de jeu
+                                </label>
+                                <select name="end_mode" class="form-control form-select">
+                                    <option value="questions">Nombre de questions</option>
+                                    <option value="points">Score maximum</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group mb-3" id="max_points_group" style="display: none;">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-star"></i> Score maximum à atteindre
+                                </label>
+                                <input type="number" name="max_points" value="500" min="50" max="10000" class="form-control form-input">
                             </div>
                             
                             <div class="d-grid gap-2 mt-4">
@@ -249,6 +266,20 @@
     const btn = document.querySelector('button[name="addp"]');
     btn.disabled = this.value.trim() === '';
 });
+
+  // Toggle max_points input based on end_mode selection
+  document.querySelector('select[name="end_mode"]').addEventListener('change', function() {
+    const maxPointsGroup = document.getElementById('max_points_group');
+    const totalQuestionsInput = document.querySelector('input[name="total"]').closest('.form-group');
+    
+    if (this.value === 'points') {
+      maxPointsGroup.style.display = 'block';
+      totalQuestionsInput.style.display = 'none';
+    } else {
+      maxPointsGroup.style.display = 'none';
+      totalQuestionsInput.style.display = 'block';
+    }
+  });
 
   // Fonction pour terminer le jeu avec confirmation
   function terminateGame() {

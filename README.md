@@ -16,11 +16,13 @@ FiveCats is a fun, competitive game where players:
 - **Multi-player Support**: Multiple players can join and compete simultaneously
 - **QR Code Integration**: Each player gets a unique QR code for easy mobile access
 - **Real-time Updates**: Live score updates and game synchronization using WebSockets
-- **Dynamic Scoring**: Fibonacci-based scoring system (1, 2, 3, 5, 8, 13, 21, 34, 55 points)
+- **Dynamic Scoring**: Fibonacci-based scoring system (0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233 points)
 - **Configurable Game Settings**:
-  - Adjustable number of choices per question (4-10)
-  - Customizable time per question (10-360 seconds)
-  - Flexible total number of questions
+  - Adjustable number of choices per question (2-15)
+  - Customizable time per question (10-90 seconds)
+  - Flexible game ending modes:
+    - Limited number of questions (0 = all available questions)
+    - Target score (first player to reach the target wins)
 - **Responsive Design**: Beautiful, cat-themed UI with Bootstrap styling
 - **Movie Database**: Comes with a collection of classic and popular movie posters
 
@@ -72,9 +74,11 @@ FiveCats is a fun, competitive game where players:
    - Each player gets a unique QR code displayed in the table
 
 2. **Configure Game Settings**:
-   - **Number of choices per question**: Choose between 4-10 options (default: 10)
-   - **Time per question**: Set timer from 10-360 seconds (default: 60)
-   - **Total questions**: Set number of questions or 0 for all available (default: 0)
+   - **Number of choices per question**: Choose between 2-15 options (default: 10)
+   - **Time per question**: Set timer from 10-90 seconds (default: 30)
+   - **Game ending mode**: Choose between:
+     - **Question limit**: Set total number of questions or 0 for all available (default: 0)
+     - **Points target**: Set a maximum score to reach (default: 500)
 
 3. **Start the Game**:
    - Click the "Go" button to launch the game board in a new window
@@ -96,12 +100,18 @@ FiveCats is a fun, competitive game where players:
 
 ### Scoring System
 
-- Points are awarded using a Fibonacci sequence: **0, 1, 2, 3, 5, 8, 13, 21, 34, 55**
+- Points are awarded using a Fibonacci sequence based on the number of choices: **0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233**
+- With 2 choices, you can win 1 point
+- With 3 choices, you can win 2 points
+- With 4 choices, you can win 3 points (1+2)
+- With 5 choices, you can win 5 points (2+3)
+- With 10 choices (default), you can win 55 points
+- With 15 choices (maximum), you can win 610 points
 - Your score depends on:
   - How many choices remain (fewer incorrect guesses = more points)
-  - How quickly you answer relative to other players
+  - The current maximum score available for the question
 - First correct answer gets maximum available points
-- Wrong answers eliminate that choice but reduce potential points
+- Wrong answers eliminate that choice but reduce potential points for the question
 - No points if time runs out
 
 ## 🛠️ Technology Stack
@@ -167,9 +177,11 @@ FiveCats/
 The game can be configured through the web interface or by modifying default values in `app.py`:
 
 ```python
-choices = 10        # Number of choices per question (4-10)
-Timer = 60          # Time per question in seconds (10-360)
-total = 0           # Total questions (0 = all available)
+choices = 10        # Number of choices per question (2-15)
+Timer = 30          # Time per question in seconds (10-90)
+total = 0           # Total questions (0 = all available, only used in 'questions' mode)
+end_mode = 'questions'  # Game ending mode: 'questions' or 'points'
+max_points = 500    # Maximum points to reach (only used in 'points' mode)
 ```
 
 ## 🌐 Deployment
