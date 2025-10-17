@@ -52,7 +52,14 @@ def hello():
 
     #question = Question(imgs, players, choices)
     #print(question)
-    return render_template('index.html', players = players_to_table(), game_state = game_state)
+    return render_template('index.html', 
+                         players=players_to_table(), 
+                         game_state=game_state,
+                         form_choices=None,
+                         form_timer=None,
+                         form_end_mode=None,
+                         form_total=None,
+                         form_max_points=None)
 
 @app.route('/game', methods=['POST', 'GET'])
 def session():
@@ -79,7 +86,7 @@ def session():
         scores.append([p.name, p.score])
 
     # Ne pas créer la question tout de suite, attendre la fin du countdown
-    return render_template('game.html', players=players_to_table(), img="", game_state=game_state)
+    return render_template('game.html', players=players_to_table(), img="", game_state=game_state, timer=Timer)
 
 @app.route('/addplayer', methods=['POST'])
 def addplayer():
@@ -87,13 +94,28 @@ def addplayer():
     name = request.form.get('player_name', '').strip()
     error = None
     
+    # Récupérer les valeurs d'options des champs cachés pour les préserver
+    form_choices = request.form.get('choices', '10')
+    form_timer = request.form.get('Timer', '30')
+    form_end_mode = request.form.get('end_mode', 'questions')
+    form_total = request.form.get('total', '0')
+    form_max_points = request.form.get('max_points', '500')
+    
     if not name:
         error = "Le nom du joueur ne peut pas être vide."
     elif any(p.name == name for p in players):
         error = f"Le joueur '{name}' existe déjà."
     
     if error:
-        return render_template('index.html', players=players_to_table(), error=error, game_state=game_state)
+        return render_template('index.html', 
+                             players=players_to_table(), 
+                             error=error, 
+                             game_state=game_state,
+                             form_choices=form_choices,
+                             form_timer=form_timer,
+                             form_end_mode=form_end_mode,
+                             form_total=form_total,
+                             form_max_points=form_max_points)
     
     try:
         players.append(Player(name))
@@ -101,9 +123,25 @@ def addplayer():
     except Exception as e:
         error = f"Erreur lors de la création du joueur: {str(e)}"
         print(f"Error creating player {name}: {e}")
-        return render_template('index.html', players=players_to_table(), error=error, game_state=game_state)
+        return render_template('index.html', 
+                             players=players_to_table(), 
+                             error=error, 
+                             game_state=game_state,
+                             form_choices=form_choices,
+                             form_timer=form_timer,
+                             form_end_mode=form_end_mode,
+                             form_total=form_total,
+                             form_max_points=form_max_points)
     
-    return redirect('/')
+    # Au lieu de rediriger, renvoyer le template avec les valeurs préservées
+    return render_template('index.html', 
+                         players=players_to_table(), 
+                         game_state=game_state,
+                         form_choices=form_choices,
+                         form_timer=form_timer,
+                         form_end_mode=form_end_mode,
+                         form_total=form_total,
+                         form_max_points=form_max_points)
 
 @app.route('/deleteplayer', methods=['POST'])
 def deleteplayer():

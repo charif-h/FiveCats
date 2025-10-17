@@ -26,21 +26,14 @@
                                 <label class="form-label d-block mb-2">
                                     <i class="fa-solid fa-list-ol"></i> Nombre de choix par question
                                 </label>
-                                <input type="number" name="choices" value="10" min="2" max="15" class="form-control form-input choices-input" maxlength="3">
+                                <input type="number" name="choices" value="{{ form_choices or '10' }}" min="2" max="15" class="form-control form-input choices-input" maxlength="3">
                             </div>
                             
                             <div class="form-group mb-3">
                                 <label class="form-label d-block mb-2">
                                     <i class="fa-solid fa-clock"></i> Temps par question (sec)
                                 </label>
-                                <input type="number" name="Timer" value="30" min="10" max="90" class="form-control form-input">
-                            </div>
-                            
-                            <div class="form-group mb-3">
-                                <label class="form-label d-block mb-2">
-                                    <i class="fa-solid fa-question"></i> Nombre total de questions
-                                </label>
-                                <input type="number" name="total" value="0" min="0" max="100" class="form-control form-input">
+                                <input type="number" name="Timer" value="{{ form_timer or '30' }}" min="10" max="90" class="form-control form-input">
                             </div>
                             
                             <div class="form-group mb-3">
@@ -48,16 +41,23 @@
                                     <i class="fa-solid fa-trophy"></i> Mode de fin de jeu
                                 </label>
                                 <select name="end_mode" class="form-control form-select">
-                                    <option value="questions">Nombre de questions</option>
-                                    <option value="points">Score maximum</option>
+                                    <option value="questions" {{ 'selected' if (form_end_mode or 'questions') == 'questions' else '' }}>Nombre de questions</option>
+                                    <option value="points" {{ 'selected' if form_end_mode == 'points' else '' }}>Score maximum</option>
                                 </select>
                             </div>
                             
-                            <div class="form-group mb-3" id="max_points_group" style="display: none;">
+                            <div class="form-group mb-3">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-question"></i> Nombre total de questions
+                                </label>
+                                <input type="number" name="total" value="{{ form_total or '0' }}" min="0" max="100" class="form-control form-input">
+                            </div>
+                            
+                            <div class="form-group mb-3" id="max_points_group" style="display: {{ 'block' if form_end_mode == 'points' else 'none' }};">
                                 <label class="form-label d-block mb-2">
                                     <i class="fa-solid fa-star"></i> Score maximum à atteindre
                                 </label>
-                                <input type="number" name="max_points" value="500" min="50" max="10000" class="form-control form-input">
+                                <input type="number" name="max_points" value="{{ form_max_points or '500' }}" min="50" max="10000" class="form-control form-input">
                             </div>
                             
                             <div class="d-grid gap-2 mt-4">
@@ -83,19 +83,26 @@
                         {{ error }}
                       </div>
                     {% endif %}
-                    <form method="POST" action="/addplayer" class="mb-4">
-                        <div class="row align-items-end">
-                            <div class="col-8">
-                                <label for="player_name" class="form-label"><i class="fa-solid fa-user-plus"></i> Nom du joueur</label>
-                                <input id="player_name" name="player_name" type="text" class="form-control"/>
-                            </div>
-                            <div class="col-4">
-                                <button type="submit" name="addp" value="addp" class="btn btn-primary w-100">
-                                    <i class="fa-solid fa-plus"></i> Ajouter
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+          <form method="POST" action="/addplayer" class="mb-4" id="addPlayerForm">
+            <!-- Hidden inputs to preserve current options when adding a player -->
+            <input type="hidden" name="choices" id="hidden_choices">
+            <input type="hidden" name="Timer" id="hidden_timer">
+            <input type="hidden" name="end_mode" id="hidden_end_mode">
+            <input type="hidden" name="total" id="hidden_total">
+            <input type="hidden" name="max_points" id="hidden_max_points">
+
+            <div class="row align-items-end">
+              <div class="col-8">
+                <label for="player_name" class="form-label"><i class="fa-solid fa-user-plus"></i> Nom du joueur</label>
+                <input id="player_name" name="player_name" type="text" class="form-control"/>
+              </div>
+              <div class="col-4">
+                <button type="submit" name="addp" value="addp" class="btn btn-primary w-100">
+                  <i class="fa-solid fa-plus"></i> Ajouter
+                </button>
+              </div>
+            </div>
+          </form>
                     <table class="table table-striped">
                         <thead>
                           <tr>
@@ -280,6 +287,32 @@
       totalQuestionsInput.style.display = 'block';
     }
   });
+
+  // Preserve current options when submitting the add-player form
+  const addPlayerForm = document.getElementById('addPlayerForm');
+  if (addPlayerForm) {
+    addPlayerForm.addEventListener('submit', function(e) {
+      // copy current option values into hidden inputs
+      const choices = document.querySelector('input[name="choices"]');
+      const timer = document.querySelector('input[name="Timer"]');
+      const endMode = document.querySelector('select[name="end_mode"]');
+      const total = document.querySelector('input[name="total"]');
+      const maxPoints = document.querySelector('input[name="max_points"]');
+
+      const hChoices = document.getElementById('hidden_choices');
+      const hTimer = document.getElementById('hidden_timer');
+      const hEndMode = document.getElementById('hidden_end_mode');
+      const hTotal = document.getElementById('hidden_total');
+      const hMaxPoints = document.getElementById('hidden_max_points');
+
+      if (hChoices && choices) hChoices.value = choices.value;
+      if (hTimer && timer) hTimer.value = timer.value;
+      if (hEndMode && endMode) hEndMode.value = endMode.value;
+      if (hTotal && total) hTotal.value = total.value;
+      if (hMaxPoints && maxPoints) hMaxPoints.value = maxPoints.value;
+      // allow submit to proceed
+    });
+  }
 
   // Fonction pour terminer le jeu avec confirmation
   function terminateGame() {
