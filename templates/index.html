@@ -8,134 +8,237 @@
     <link href="{{ url_for('static', filename='css/index.css') }}" rel="stylesheet">
 </head>
 <body>
-    <div class="container p-3 my-3 border d-flex align-items-center">
-        <div class="me-3 logo-container">
-            <img id="logo" src="static/logo-cat.png" alt="5 Cats Game Logo">
-        </div>
-        <div class="options-container">
-            <h1 class="options-title"><i class="fa-solid fa-cat"></i> Options </h1>
-            <form method="POST" action="/game" target="_blank" class="mt-2">
-                <span class="form-row row">
-                    <span class="col-4">
-                    <i class="fa-solid fa-list-ol"></i>
-                    Nombre de choix par question</span>
-                    <input type="number" name="choices" value="10" min="4" max="10" class="form-control d-inline w-auto mx-2 col-1 form-input choices-input" maxlength="3">
-                </span>
-                <br>
-                <span class="form-row row">
-                    <span class="col-4"><i class="fa-solid fa-clock"></i>
-                    Temps par question</span>
-                    <input type="number" name="Timer" value="60" min="10" max="360" class="form-control d-inline w-auto mx-2 col-1 form-input"> sec
-                </span>
-                <br>
-                <span class="form-row row">
-                    <span class="col-4"><i class="fa-solid fa-question" ></i>
-                    Nombre total de questions</span>
-                    <input type="number" name="total" value="0" min="0" max="100" class="form-control d-inline w-auto mx-2 col-1 form-input">
-                </span>
-                <br>
-                <button type="submit" name="start" value="start" class="btn btn-primary mt-2 start-button" {% if players|length == 0 %} disabled {%endif%}>
-                    <i class="fa-solid fa-play"></i> Go
-                </button>
-                <!-- Bouton visible temporairement pour test - normalement affiché seulement si game_state in ['loading', 'in_progress', 'paused'] -->
-                <button type="button" class="btn btn-danger mt-2 ms-2" style="font-size:1rem; padding:6px 18px;" onclick="terminateGame()">
-                    <i class="fa-solid fa-stop"></i> Terminer le jeu
-                </button>
-            </form>
-        </div>
-    </div>
-    <div class="container p-5 my-5 border">
-        <h1><i class="fa-solid fa-users"></i> Liste des joueurs</h1>
-        {% if error %}
-          <div class="alert alert-danger" role="alert">
-            {{ error }}
-          </div>
-        {% endif %}
-        <form method="POST" action="/addplayer" class="mb-4">
-            <label for="player_name"><i class="fa-solid fa-user-plus"></i> Nom du joueur</label>
-            <input id="player_name" name="player_name" type="text" class="form-control d-inline w-auto mx-2"/>
-            <button type="submit" name="addp" value="addp" class="btn btn-primary">
-                <i class="fa-solid fa-plus"></i> Ajouter
-            </button>
-        </form>
-        <table class="table table-striped">
-            <thead>
-              <tr>
-                <th><i class="fa-solid fa-user"></i> Joueur</th>
-                <th><i class="fa-solid fa-star"></i> Score</th>
-                <th><i class="fa-solid fa-qrcode"></i> QR Code</th>
-                <th><i class="fa-solid fa-trash"></i> Supprimer</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in players %}
-              <tr>
-                <td>
-                  <div class="d-flex align-items-center">
-                    {% if r[2] %}
-        <img src="{{ url_for('static', filename='avatars/' + r[2]) }}" 
-          alt="Avatar" 
-          class="player-avatar me-2" 
-          data-player-name="{{ r[0] }}"
-          style="width: 48px; height: 48px; border-radius: 50%; cursor: pointer;"
-          title="Voir le profil de {{ r[0] }}"
-          onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-        <i class="fa-solid fa-user me-2" style="display: none; width: 48px; text-align: center;"></i>
-                    {% else %}
-        <i class="fa-solid fa-user me-2" style="width: 48px; text-align: center;"></i>
+    <div class="container-fluid p-3 my-3">
+        <div class="row gx-4">
+            <!-- Colonne de gauche : Options -->
+            <div class="col-4">
+                <div class="options-panel p-4 border">
+                    <!-- Logo en haut -->
+                    <div class="text-center mb-4">
+                        <img id="logo" src="static/logo-cat.png" alt="5 Cats Game Logo">
+                    </div>
+                    
+                    <!-- Options en dessous -->
+                    <div class="options-container">
+                        <h1 class="options-title text-center mb-4"><i class="fa-solid fa-cat"></i> Options </h1>
+                        <form method="POST" action="/game" target="_blank" class="mt-2">
+                            <div class="form-group mb-3">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-list-ol"></i> Nombre de choix par question
+                                </label>
+                                <input type="number" name="choices" value="10" min="4" max="10" class="form-control form-input choices-input" maxlength="3">
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-clock"></i> Temps par question (sec)
+                                </label>
+                                <input type="number" name="Timer" value="60" min="10" max="360" class="form-control form-input">
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label class="form-label d-block mb-2">
+                                    <i class="fa-solid fa-question"></i> Nombre total de questions
+                                </label>
+                                <input type="number" name="total" value="0" min="0" max="100" class="form-control form-input">
+                            </div>
+                            
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" name="start" value="start" class="btn btn-primary start-button" {% if players|length == 0 %} disabled {%endif%}>
+                                    <i class="fa-solid fa-play"></i> Go
+                                </button>
+                                <!-- Bouton visible temporairement pour test - normalement affiché seulement si game_state in ['loading', 'in_progress', 'paused'] -->
+                                <button type="button" class="btn btn-danger" onclick="terminateGame()">
+                                    <i class="fa-solid fa-stop"></i> Terminer le jeu
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Colonne de droite : Liste des joueurs -->
+            <div class="col-8">
+                <div class="players-panel p-4 border">
+                    <h1><i class="fa-solid fa-users"></i> Liste des joueurs</h1>
+                    {% if error %}
+                      <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                      </div>
                     {% endif %}
-                    <a href="/player/{{ r[0] }}" target="_blank" class="text-decoration-none">
-                      {{ r[0] }}
-                    </a>
-                  </div>
-                </td>
-                <td>{{ r[1] }}</td>
-                <td>
-                    <a href="#" class="player-link" data-name="{{ r[0] }}" data-qr="static/players/{{ r[0] }}.svg" title="Voir le QR code de {{ r[0] }}">
-                       <span class="qr-bg">
-                          <img src="static/players/{{ r[0] }}.svg" alt="QR code">
-                      </span>
-                    </a>
-                </td>
-                <td>
-                  <form method="POST" action="/deleteplayer" class="delete-form">
-                    <input type="hidden" name="player_name" value="{{ r[0] }}">
-                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer {{ r[0] }}">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
-                  </form>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                    <form method="POST" action="/addplayer" class="mb-4">
+                        <div class="row align-items-end">
+                            <div class="col-8">
+                                <label for="player_name" class="form-label"><i class="fa-solid fa-user-plus"></i> Nom du joueur</label>
+                                <input id="player_name" name="player_name" type="text" class="form-control"/>
+                            </div>
+                            <div class="col-4">
+                                <button type="submit" name="addp" value="addp" class="btn btn-primary w-100">
+                                    <i class="fa-solid fa-plus"></i> Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <table class="table table-striped">
+                        <thead>
+                          <tr>
+                            <th><i class="fa-solid fa-user"></i> Joueur</th>
+                            <th><i class="fa-solid fa-star"></i> Score</th>
+                            <th><i class="fa-solid fa-qrcode"></i> QR Code</th>
+                            <th><i class="fa-solid fa-trash"></i> Supprimer</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for r in players %}
+                          <tr>
+                            <td>
+                              <div class="d-flex align-items-center">
+                                {% if r[2] %}
+            <img src="{{ url_for('static', filename='avatars/' + r[2]) }}" 
+              alt="Avatar" 
+              class="player-avatar me-2" 
+              data-player-name="{{ r[0] }}"
+              style="width: 48px; height: 48px; border-radius: 50%; cursor: pointer;"
+              title="Voir le profil de {{ r[0] }}"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+            <i class="fa-solid fa-user me-2" style="display: none; width: 48px; text-align: center;"></i>
+                                {% else %}
+            <i class="fa-solid fa-user me-2" style="width: 48px; text-align: center;"></i>
+                                {% endif %}
+                                <a href="/player/{{ r[0] }}" target="_blank" class="text-decoration-none">
+                                  {{ r[0] }}
+                                </a>
+                              </div>
+                            </td>
+                            <td>{{ r[1] }}</td>
+                            <td>
+                                <a href="#" class="player-link" data-name="{{ r[0] }}" data-qr="static/players/{{ r[0] }}.svg" title="Voir le QR code de {{ r[0] }}">
+                                   <span class="qr-bg">
+                                      <img src="static/players/{{ r[0] }}.svg" alt="QR code">
+                                  </span>
+                                </a>
+                            </td>
+                            <td>
+                              <form method="POST" action="/deleteplayer" class="delete-form">
+                                <input type="hidden" name="player_name" value="{{ r[0] }}">
+                                <button type="submit" class="btn btn-danger btn-sm" title="Supprimer {{ r[0] }}">
+                                  <i class="fa-solid fa-trash"></i>
+                                </button>
+                              </form>
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Card modal for player info -->
-<div id="playerCard" class="card text-dark">
-  <div class="card-header bg-warning text-center">
-    <span id="cardPlayerName"></span>
-    <button type="button" class="btn-close float-end" aria-label="Close" onclick="closePlayerCard()"></button>
+<div id="playerCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:450px; z-index:9999; max-width:550px;">
+  <div class="card-header bg-primary text-white text-center">
+    <span id="cardPlayerName" style="font-weight:bold; font-size:1.2rem;"></span>
+    <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerCard()"></button>
   </div>
   <div class="card-body text-center">
-    <span class="qr-bg">
-      <img id="cardPlayerQR" src="" alt="Player QR code">
-    </span>
+    <!-- Avatar et Score côte à côte -->
+    <div class="row mb-4 align-items-center">
+      <div class="col-6 text-center">
+        <img id="cardPlayerAvatar" src="" alt="Avatar" style="width:120px; height:120px; border-radius:50%; border: 3px solid #0d6efd; object-fit: cover;">
+        <i id="cardPlayerDefaultAvatar" class="fa-solid fa-user" style="display: none; font-size: 80px; color: #6c757d;"></i>
+      </div>
+      <div class="col-6">
+        <div class="card bg-light h-100 d-flex justify-content-center align-items-center">
+          <div class="card-body p-3 text-center">
+            <h6 class="card-title mb-2 text-muted">Score</h6>
+            <h2 class="text-primary mb-0" id="cardPlayerScore">0</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- QR Code plus grand -->
+    <div class="mb-2">
+      <h6 class="text-muted mb-3">QR Code</h6>
+      <div class="qr-bg d-inline-block">
+        <img id="cardPlayerQR" src="" alt="Player QR code" style="width:200px; height:200px;">
+      </div>
+    </div>
   </div>
 </div>
-<div id="cardOverlay" onclick="closePlayerCard()"></div>
+<div id="cardOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9998;" onclick="closePlayerCard()"></div>
 
 <script>
-  // Ouvre la carte au clic sur le nom du joueur
+  // Fonction pour afficher la carte du joueur
+  function showPlayerCard(playerName, playerScore, playerAvatar, playerQR) {
+    // Remplir les informations de la carte
+    document.getElementById('cardPlayerName').textContent = playerName;
+    document.getElementById('cardPlayerScore').textContent = playerScore;
+    document.getElementById('cardPlayerQR').src = playerQR;
+    
+    // Gérer l'avatar
+    const avatarImg = document.getElementById('cardPlayerAvatar');
+    const defaultAvatar = document.getElementById('cardPlayerDefaultAvatar');
+    
+    if (playerAvatar && playerAvatar !== '') {
+      avatarImg.src = `/static/avatars/${playerAvatar}`;
+      avatarImg.style.display = 'block';
+      defaultAvatar.style.display = 'none';
+      
+      // Gérer le cas où l'image n'existe pas
+      avatarImg.onerror = function() {
+        this.style.display = 'none';
+        defaultAvatar.style.display = 'block';
+      };
+    } else {
+      avatarImg.style.display = 'none';
+      defaultAvatar.style.display = 'block';
+    }
+    
+    // Afficher la carte et l'overlay
+    document.getElementById('playerCard').style.display = 'block';
+    document.getElementById('cardOverlay').style.display = 'block';
+  }
+
+  // Ouvre la carte au clic sur le QR code
   document.querySelectorAll('.player-link').forEach(function(link){
     link.addEventListener('click', function(e){
       e.preventDefault();
-      document.getElementById('cardPlayerName').textContent = this.dataset.name;
-      document.getElementById('cardPlayerQR').src = this.dataset.qr;
-      document.getElementById('playerCard').style.display = 'block';
-      document.getElementById('cardOverlay').style.display = 'block';
+      const playerName = this.dataset.name;
+      const playerQR = this.dataset.qr;
+      
+      // Récupérer les informations du joueur depuis la ligne du tableau
+      const row = this.closest('tr');
+      const playerScore = row.cells[1].textContent.trim();
+      
+      // Récupérer l'avatar depuis l'image de la première cellule
+      const avatarImg = row.querySelector('.player-avatar');
+      const playerAvatar = avatarImg ? avatarImg.src.split('/').pop() : '';
+      
+      showPlayerCard(playerName, playerScore, playerAvatar, playerQR);
     });
   });
+
+  // Ouvre la carte au clic sur l'avatar
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('player-avatar')) {
+      e.preventDefault();
+      const playerName = e.target.getAttribute('data-player-name');
+      
+      // Récupérer les informations du joueur depuis la ligne du tableau
+      const row = e.target.closest('tr');
+      const playerScore = row.cells[1].textContent.trim();
+      const playerAvatar = e.target.src.split('/').pop();
+      
+      // Récupérer le QR code depuis le lien dans la même ligne
+      const qrLink = row.querySelector('.player-link');
+      const playerQR = qrLink ? qrLink.dataset.qr : '';
+      
+      showPlayerCard(playerName, playerScore, playerAvatar, playerQR);
+    }
+  });
+  
   // Ferme la carte
   function closePlayerCard(){
     document.getElementById('playerCard').style.display = 'none';
@@ -159,93 +262,7 @@
       form.submit();
     }
   }
-
-  // Fonctionnalité de carte de profil joueur
-  function attachAvatarClickHandlers() {
-    document.querySelectorAll('.player-avatar').forEach(function(avatar) {
-      avatar.addEventListener('click', function(e) {
-        e.preventDefault();
-        const playerName = this.getAttribute('data-player-name');
-        showPlayerProfileCard(playerName);
-      });
-    });
-  }
-
-  function showPlayerProfileCard(playerName) {
-    // Récupérer les détails du joueur via API
-    fetch(`/api/player-details/${playerName}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
-          console.error('Erreur:', data.error);
-          return;
-        }
-        
-        // Remplir la carte avec les données
-        document.getElementById('cardPlayerName').textContent = data.name;
-        document.getElementById('cardPlayerAvatar').src = `/static/avatars/${data.avatar}`;
-        document.getElementById('cardPlayerScore').textContent = data.score;
-        document.getElementById('cardPlayerRanking').textContent = `#${data.ranking}`;
-        document.getElementById('cardPlayerQR').src = data.qrcode;
-        
-        // Afficher la carte
-        document.getElementById('playerProfileCard').style.display = 'block';
-        document.getElementById('cardProfileOverlay').style.display = 'block';
-      })
-      .catch(error => {
-        console.error('Erreur lors de la récupération des détails du joueur:', error);
-      });
-  }
-
-  function closePlayerProfileCard() {
-    document.getElementById('playerProfileCard').style.display = 'none';
-    document.getElementById('cardProfileOverlay').style.display = 'none';
-  }
-
-  // Attacher les gestionnaires d'événements au chargement de la page
-  document.addEventListener('DOMContentLoaded', function() {
-    attachAvatarClickHandlers();
-  });
 </script>
-
-<!-- Carte modale pour le profil joueur -->
-<div id="playerProfileCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:400px; z-index:9999; max-width:500px;">
-  <div class="card-header bg-primary text-white text-center">
-    <span id="cardPlayerName" style="font-weight:bold;"></span>
-    <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerProfileCard()"></button>
-  </div>
-  <div class="card-body text-center">
-    <div class="mb-3">
-      <img id="cardPlayerAvatar" src="" alt="Avatar" style="width:150px; height:150px; border-radius:50%; border: 3px solid #0d6efd;">
-    </div>
-    <div class="row mb-3">
-      <div class="col-6">
-        <div class="card bg-light">
-          <div class="card-body p-2">
-            <h6 class="card-title mb-1">Score</h6>
-            <h4 class="text-primary mb-0" id="cardPlayerScore">0</h4>
-          </div>
-        </div>
-      </div>
-      <div class="col-6">
-        <div class="card bg-light">
-          <div class="card-body p-2">
-            <h6 class="card-title mb-1">Classement</h6>
-            <h4 class="text-success mb-0" id="cardPlayerRanking">#1</h4>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="mb-3">
-      <h6>QR Code</h6>
-      <div class="qr-bg d-inline-block">
-        <img id="cardPlayerQR" src="" style="width:120px;">
-      </div>
-    </div>
-  </div>
-</div>
-<div id="cardProfileOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9998;" onclick="closePlayerProfileCard()"></div>
-
 </script>
 </body>
 </html>
