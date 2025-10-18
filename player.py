@@ -9,6 +9,7 @@ class Player:
     self.name = name
     self.token = uuid4()
     self.score = 0
+    self.is_active = False  # Player is initially inactive
     
     # Assigner un avatar aléatoire
     avatar_folder = 'static/avatars'

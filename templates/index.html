@@ -6,6 +6,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/index.css') }}" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
 </head>
 <body>
     <div class="container-fluid p-3 my-3">
@@ -132,6 +133,10 @@
                                 <a href="/player/{{ r[0] }}" target="_blank" class="text-decoration-none">
                                   {{ r[0] }}
                                 </a>
+                                <span class="player-status-indicator ms-2" data-player-name="{{ r[0] }}" 
+                                      title="{% if r[4] %}Actif{% else %}Inactif{% endif %}">
+                                  <i class="fa-solid fa-circle" style="font-size: 10px; color: {% if r[4] %}#28a745{% else %}#dc3545{% endif %};"></i>
+                                </span>
                               </div>
                             </td>
                             <td>{{ r[1] }}</td>
@@ -163,6 +168,9 @@
 <div id="playerCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:450px; z-index:9999; max-width:550px;">
   <div class="card-header bg-primary text-white text-center">
     <span id="cardPlayerName" style="font-weight:bold; font-size:1.2rem;"></span>
+    <span id="cardPlayerStatusIndex" class="ms-2" title="Status du joueur">
+      <i class="fa-solid fa-circle" style="font-size: 10px;"></i>
+    </span>
     <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerCard()"></button>
   </div>
   <div class="card-body text-center">
@@ -195,11 +203,17 @@
 
 <script>
   // Fonction pour afficher la carte du joueur
-  function showPlayerCard(playerName, playerScore, playerAvatar, playerQR) {
+  function showPlayerCard(playerName, playerScore, playerAvatar, playerQR, isActive) {
     // Remplir les informations de la carte
     document.getElementById('cardPlayerName').textContent = playerName;
     document.getElementById('cardPlayerScore').textContent = playerScore;
     document.getElementById('cardPlayerQR').src = playerQR;
+    
+    // Update status indicator
+    const statusIndicator = document.getElementById('cardPlayerStatusIndex');
+    const statusIcon = statusIndicator.querySelector('i');
+    statusIcon.style.color = isActive ? '#28a745' : '#dc3545';
+    statusIndicator.title = isActive ? 'Actif' : 'Inactif';
     
     // Gérer l'avatar
     const avatarImg = document.getElementById('cardPlayerAvatar');
@@ -240,7 +254,11 @@
       const avatarImg = row.querySelector('.player-avatar');
       const playerAvatar = avatarImg ? avatarImg.src.split('/').pop() : '';
       
-      showPlayerCard(playerName, playerScore, playerAvatar, playerQR);
+      // Récupérer le statut depuis l'indicateur
+      const statusIndicator = row.querySelector('.player-status-indicator i');
+      const isActive = statusIndicator && statusIndicator.style.color === 'rgb(40, 167, 69)'; // #28a745 in RGB
+      
+      showPlayerCard(playerName, playerScore, playerAvatar, playerQR, isActive);
     });
   });
 
@@ -259,7 +277,11 @@
       const qrLink = row.querySelector('.player-link');
       const playerQR = qrLink ? qrLink.dataset.qr : '';
       
-      showPlayerCard(playerName, playerScore, playerAvatar, playerQR);
+      // Récupérer le statut depuis l'indicateur
+      const statusIndicator = row.querySelector('.player-status-indicator i');
+      const isActive = statusIndicator && statusIndicator.style.color === 'rgb(40, 167, 69)'; // #28a745 in RGB
+      
+      showPlayerCard(playerName, playerScore, playerAvatar, playerQR, isActive);
     }
   });
   
@@ -326,6 +348,32 @@
       form.submit();
     }
   }
+  
+  // Connect to Socket.IO for real-time player status updates
+  var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+  
+  socket.on('connect', function() {
+    console.log('Connected to server for status updates');
+  });
+  
+  // Listen for player status changes
+  socket.on('player_status_changed', function(data) {
+    const playerName = data.player_name;
+    const isActive = data.is_active;
+    const statusColor = isActive ? '#28a745' : '#dc3545';
+    const statusTitle = isActive ? 'Actif' : 'Inactif';
+    
+    // Update all status indicators for this player
+    document.querySelectorAll(`.player-status-indicator[data-player-name="${playerName}"]`).forEach(function(indicator) {
+      const icon = indicator.querySelector('i');
+      if (icon) {
+        icon.style.color = statusColor;
+        indicator.title = statusTitle;
+      }
+    });
+    
+    console.log(`Player ${playerName} status changed to: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+  });
 </script>
 </script>
 </body>
