@@ -147,6 +147,16 @@ def addplayer():
 def deleteplayer():
     name = request.form.get('player_name')
     global players
+    
+    # Delete the QR code file if it exists
+    qr_path = os.path.join('static/players', f'{name}.svg')
+    try:
+        if os.path.exists(qr_path):
+            os.remove(qr_path)
+            print(f"QR code file deleted for player: {name}")
+    except Exception as e:
+        print(f"Error deleting QR code file for {name}: {e}")
+    
     players = [p for p in players if p.name != name]
     return redirect('/')
 
