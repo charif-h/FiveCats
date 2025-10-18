@@ -7,7 +7,7 @@ class Question:
         self.choix.sort()
         self.active = True
         self.score_id = choices - 1
-        self.scores = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+        self.scores = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610]
         self.players_choices = {}
         for p in players:
             self.players_choices[p.name] = self.choix.copy()

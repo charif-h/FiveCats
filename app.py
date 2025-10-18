@@ -11,8 +11,11 @@ socketio = SocketIO(app)
 players = []
 imgs = []
 choices = 10
-Timer = choices*6
+Timer = 30
 total = 0
+end_mode = 'questions'  # 'questions' or 'points'
+max_points = 500
+questions_asked = 0  # Counter for questions asked
 game_state = 'waiting'
 previous_state = None  # Pour mémoriser l'état avant pause
 
@@ -49,7 +52,14 @@ def hello():
 
     #question = Question(imgs, players, choices)
     #print(question)
-    return render_template('index.html', players = players_to_table(), game_state = game_state)
+    return render_template('index.html', 
+                         players=players_to_table(), 
+                         game_state=game_state,
+                         form_choices=None,
+                         form_timer=None,
+                         form_end_mode=None,
+                         form_total=None,
+                         form_max_points=None)
 
 @app.route('/game', methods=['POST', 'GET'])
 def session():
@@ -57,12 +67,18 @@ def session():
     global choices
     global Timer
     global total
+    global end_mode
+    global max_points
+    global questions_asked
     set_game_state('loading')  # Utiliser la fonction centralisée
     choices = int(request.form['choices'])
     Timer = int(request.form['Timer'])
     total = int(request.form['total'])
+    end_mode = request.form.get('end_mode', 'questions')
+    max_points = int(request.form.get('max_points', 500))
+    questions_asked = 0  # Reset question counter
 
-    if total == 0:
+    if total == 0 and end_mode == 'questions':
         total = len(imgs)
 
     scores = []
@@ -70,7 +86,7 @@ def session():
         scores.append([p.name, p.score])
 
     # Ne pas créer la question tout de suite, attendre la fin du countdown
-    return render_template('game.html', players=players_to_table(), img="", game_state=game_state)
+    return render_template('game.html', players=players_to_table(), img="", game_state=game_state, timer=Timer)
 
 @app.route('/addplayer', methods=['POST'])
 def addplayer():
@@ -78,13 +94,28 @@ def addplayer():
     name = request.form.get('player_name', '').strip()
     error = None
     
+    # Récupérer les valeurs d'options des champs cachés pour les préserver
+    form_choices = request.form.get('choices', '10')
+    form_timer = request.form.get('Timer', '30')
+    form_end_mode = request.form.get('end_mode', 'questions')
+    form_total = request.form.get('total', '0')
+    form_max_points = request.form.get('max_points', '500')
+    
     if not name:
         error = "Le nom du joueur ne peut pas être vide."
     elif any(p.name == name for p in players):
         error = f"Le joueur '{name}' existe déjà."
     
     if error:
-        return render_template('index.html', players=players_to_table(), error=error, game_state=game_state)
+        return render_template('index.html', 
+                             players=players_to_table(), 
+                             error=error, 
+                             game_state=game_state,
+                             form_choices=form_choices,
+                             form_timer=form_timer,
+                             form_end_mode=form_end_mode,
+                             form_total=form_total,
+                             form_max_points=form_max_points)
     
     try:
         players.append(Player(name))
@@ -92,9 +123,25 @@ def addplayer():
     except Exception as e:
         error = f"Erreur lors de la création du joueur: {str(e)}"
         print(f"Error creating player {name}: {e}")
-        return render_template('index.html', players=players_to_table(), error=error, game_state=game_state)
+        return render_template('index.html', 
+                             players=players_to_table(), 
+                             error=error, 
+                             game_state=game_state,
+                             form_choices=form_choices,
+                             form_timer=form_timer,
+                             form_end_mode=form_end_mode,
+                             form_total=form_total,
+                             form_max_points=form_max_points)
     
-    return redirect('/')
+    # Au lieu de rediriger, renvoyer le template avec les valeurs préservées
+    return render_template('index.html', 
+                         players=players_to_table(), 
+                         game_state=game_state,
+                         form_choices=form_choices,
+                         form_timer=form_timer,
+                         form_end_mode=form_end_mode,
+                         form_total=form_total,
+                         form_max_points=form_max_points)
 
 @app.route('/deleteplayer', methods=['POST'])
 def deleteplayer():
@@ -162,6 +209,18 @@ def choose(token, answer):
     player = next((x for x in players if x.name == token), None)
     points_earned = question.check_answer(player.name, answer)
     player.score += points_earned
+    
+    # Vérifier si le joueur a atteint le score cible
+    if end_mode == 'points' and player.score >= max_points:
+        # Le joueur a atteint le score cible - terminer le jeu
+        set_game_state('finished')
+        socketio.emit('game_finished', {
+            'reason': 'target_reached',
+            'final_scores': players_to_table(False),
+            'winner': {'name': player.name, 'score': player.score},
+            'message': f'{player.name} a atteint le score cible de {max_points} points !'
+        })
+        return jsonify({'status': 'game_ended', 'reason': 'target_reached'})
     
     # Déterminer si la réponse est correcte et envoyer une notification via Socket.IO
     is_correct = points_earned > 0
@@ -385,12 +444,15 @@ def handle_disconnect():
 
 @socketio.on('reset_game')
 def handle_reset_game():
-    global players, imgs, question
+    global players, imgs, question, questions_asked
     set_game_state('waiting')
     
     # Réinitialiser les scores des joueurs
     for player in players:
         player.score = 0
+    
+    # Réinitialiser le compteur de questions
+    questions_asked = 0
     
     # Recharger les images
     imgs = os.listdir('static/movies')
@@ -451,17 +513,36 @@ def get_player_details():
     return players_details
 
 def newQuestion():
-    global question, game_state
+    global question, game_state, questions_asked
+    
+    # Vérifier si on a atteint la limite de questions en mode questions
+    if end_mode == 'questions' and questions_asked >= total:
+        print(f'Question limit reached ({questions_asked}/{total}) - ending game')
+        set_game_state('finished')
+        socketio.emit('game_finished', {
+            'reason': 'no_more_images',
+            'final_scores': players_to_table(False),
+            'winner': get_winner() if players else None,
+            'message': f'Toutes les {total} questions ont été posées !'
+        })
+        return
     
     # Vérifier s'il reste des images
     if len(imgs) == 0:
         print('No more images available - ending game')
-        socketio.emit('end_game', {'reason': 'no_more_images'})
+        set_game_state('finished')
+        socketio.emit('game_finished', {
+            'reason': 'no_more_images',
+            'final_scores': players_to_table(False),
+            'winner': get_winner() if players else None,
+            'message': 'Toutes les images ont été utilisées !'
+        })
         return
     
     question = Question(imgs, players, choices)
     imgs.remove(question.image)
-    print(question.choices_to_json())
+    questions_asked += 1  # Increment question counter
+    print(f'Question {questions_asked}/{total if end_mode == "questions" else "∞"} - {question.choices_to_json()}')
     
     # Calculer les scores pour chaque joueur
     player_total_scores = {}
