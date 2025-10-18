@@ -572,6 +572,9 @@
 <div id="playerProfileCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:400px; z-index:9999; max-width:500px;">
   <div class="card-header bg-primary text-white text-center">
     <span id="cardPlayerName" style="font-weight:bold;"></span>
+    <span id="cardPlayerStatusPlayer" class="ms-2" title="Status du joueur">
+      <i class="fa-solid fa-circle" style="font-size: 10px;"></i>
+    </span>
     <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerProfileCard()"></button>
   </div>
   <div class="card-body text-center">
@@ -634,6 +637,13 @@
         document.getElementById('cardPlayerScore').textContent = data.score;
         document.getElementById('cardPlayerRanking').textContent = `#${data.ranking}`;
         document.getElementById('cardPlayerQR').src = data.qrcode;
+        
+        // Update status indicator
+        const statusIndicator = document.getElementById('cardPlayerStatusPlayer');
+        const statusIcon = statusIndicator.querySelector('i');
+        const isActive = data.is_active || false;
+        statusIcon.style.color = isActive ? '#28a745' : '#dc3545';
+        statusIndicator.title = isActive ? 'Actif' : 'Inactif';
         
         // Afficher la carte
         document.getElementById('playerProfileCard').style.display = 'block';
