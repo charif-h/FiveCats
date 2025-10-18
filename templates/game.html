@@ -126,6 +126,10 @@
             var finishScreen = document.createElement('div');
             finishScreen.id = 'finish_screen';
             finishScreen.className = 'text-center';
+            
+            // Déterminer si c'est une fin naturelle ou manuelle
+            const isNaturalEnd = data.reason && ['no_more_images', 'target_reached'].includes(data.reason);
+            
             finishScreen.innerHTML = `
                 <h1 class="mb-4" style="color: #ffd700;">
                     <i class="fa-solid fa-trophy"></i> Jeu Terminé !
@@ -136,7 +140,7 @@
                     </h2>
                 ` : ''}
                 <p class="lead mb-4">${data.message}</p>
-                <div class="mb-4">
+                <div class="mb-5">
                     <h3>Scores finaux:</h3>
                     <table class="table table-striped mx-auto" style="max-width: 400px;">
                         <thead>
@@ -149,15 +153,29 @@
                         </tbody>
                     </table>
                 </div>
-                <button class="btn btn-success btn-lg me-3" onclick="resetGame()">
-                    <i class="fa-solid fa-redo"></i> Nouveau Jeu
-                </button>
-                <button class="btn btn-secondary btn-lg" onclick="goHome()">
-                    <i class="fa-solid fa-home"></i> Accueil
-                </button>
+                ${!isNaturalEnd ? `
+                    <button class="btn btn-success btn-lg me-3" onclick="resetGame()">
+                        <i class="fa-solid fa-redo"></i> Nouveau Jeu
+                    </button>
+                    <button class="btn btn-secondary btn-lg" onclick="goHome()">
+                        <i class="fa-solid fa-home"></i> Accueil
+                    </button>
+                ` : `
+                    <div class="mt-4">
+                        <p class="text-muted">Merci d'avoir joué !</p>
+                        <small class="text-muted">Cette fenêtre se fermera automatiquement dans quelques secondes...</small>
+                    </div>
+                `}
             `;
             
             document.querySelector('.game-container').appendChild(finishScreen);
+            
+            // Pour les fins naturelles, fermer automatiquement après 8 secondes
+            if (isNaturalEnd) {
+                setTimeout(() => {
+                    window.close();
+                }, 8000);
+            }
         }
 
         function resetGame() {

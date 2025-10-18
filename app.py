@@ -213,13 +213,13 @@ def choose(token, answer):
     # Vérifier si le joueur a atteint le score cible
     if end_mode == 'points' and player.score >= max_points:
         # Le joueur a atteint le score cible - terminer le jeu
-        socketio.emit('end_game', {
+        set_game_state('finished')
+        socketio.emit('game_finished', {
             'reason': 'target_reached',
             'final_scores': players_to_table(False),
             'winner': {'name': player.name, 'score': player.score},
             'message': f'{player.name} a atteint le score cible de {max_points} points !'
         })
-        set_game_state('finished')
         return jsonify({'status': 'game_ended', 'reason': 'target_reached'})
     
     # Déterminer si la réponse est correcte et envoyer une notification via Socket.IO
@@ -518,25 +518,25 @@ def newQuestion():
     # Vérifier si on a atteint la limite de questions en mode questions
     if end_mode == 'questions' and questions_asked >= total:
         print(f'Question limit reached ({questions_asked}/{total}) - ending game')
-        socketio.emit('end_game', {
+        set_game_state('finished')
+        socketio.emit('game_finished', {
             'reason': 'no_more_images',
             'final_scores': players_to_table(False),
             'winner': get_winner() if players else None,
             'message': f'Toutes les {total} questions ont été posées !'
         })
-        set_game_state('finished')
         return
     
     # Vérifier s'il reste des images
     if len(imgs) == 0:
         print('No more images available - ending game')
-        socketio.emit('end_game', {
+        set_game_state('finished')
+        socketio.emit('game_finished', {
             'reason': 'no_more_images',
             'final_scores': players_to_table(False),
             'winner': get_winner() if players else None,
             'message': 'Toutes les images ont été utilisées !'
         })
-        set_game_state('finished')
         return
     
     question = Question(imgs, players, choices)
