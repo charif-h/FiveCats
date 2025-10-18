@@ -14,6 +14,8 @@
 
         socket.on('connect', function () {
             console.log('Connected to the server');
+            // Notify server that player is connected
+            socket.emit('player_connected', {'player_name': '{{name}}'});
             // Initialiser l'interface selon l'état actuel du jeu
             updatePlayerInterface(currentPlayerGameState);
             // Initialiser la barre de progression
@@ -481,6 +483,20 @@
                 removePlayerPausedEffect();
             }
         }
+        
+        // Notify server when player page is about to close
+        window.addEventListener('beforeunload', function() {
+            socket.emit('player_disconnected', {'player_name': '{{name}}'});
+        });
+        
+        // Also handle when visibility changes (tab switch, minimize)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                socket.emit('player_disconnected', {'player_name': '{{name}}'});
+            } else {
+                socket.emit('player_connected', {'player_name': '{{name}}'});
+            }
+        });
     </script>
 </head>
 <body>

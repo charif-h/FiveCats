@@ -20,13 +20,25 @@ class Question:
         if (answer == self.image):
             ret = self.getQuestionValue(player_token)
             self.players_choices[player_token] = []
-            self.active = sum(len(pc) > 0 for pc in self.players_choices.values()) > 0
-            print(sum(len(pc) > 0 for pc in self.players_choices.values()), self.active)
+            # Check if question is still active: only count active players
+            active_players_with_choices = sum(
+                1 for player_name, choices in self.players_choices.items()
+                if len(choices) > 0 and self._is_player_active(player_name)
+            )
+            self.active = active_players_with_choices > 0
+            print(f"Active players with choices: {active_players_with_choices}, Question active: {self.active}")
             self.score_id -= 1
         else:
             self.players_choices[player_token].remove(answer)
 
         return ret
+    
+    def _is_player_active(self, player_name):
+        """Check if a player is active (helper method for checking player status)"""
+        # This will be set from app.py when the question is created
+        if hasattr(self, 'players_status'):
+            return self.players_status.get(player_name, False)
+        return True  # Default to True if status not set
 
     def time_out(self):
         for p in self.players_choices.keys():

@@ -441,6 +441,10 @@
                                data-player-name="{{ r[0] }}" title="Voir le profil de {{ r[0] }}"></i>
                             {% endif %}
                             <span>{{ r[0] }}</span>
+                            <span class="player-status-indicator ms-2" data-player-name="{{ r[0] }}" 
+                                  title="{% if r[4] %}Actif{% else %}Inactif{% endif %}">
+                              <i class="fa-solid fa-circle" style="font-size: 10px; color: {% if r[4] %}#28a745{% else %}#dc3545{% endif %};"></i>
+                            </span>
                           </div>
                         </td>
                         <td><p id="{{ r[0] }}_score">{{ r[1] }}</p></td>
@@ -476,6 +480,9 @@
     <div id="playerProfileCard" class="card text-dark" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); min-width:400px; z-index:9999; max-width:500px;">
       <div class="card-header bg-primary text-white text-center">
         <span id="cardPlayerName" style="font-weight:bold;"></span>
+        <span id="cardPlayerStatus" class="ms-2" title="Status du joueur">
+          <i class="fa-solid fa-circle" style="font-size: 10px;"></i>
+        </span>
         <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="closePlayerProfileCard()"></button>
       </div>
       <div class="card-body text-center">
@@ -545,6 +552,13 @@
                 document.getElementById('cardPlayerRanking').textContent = `#${data.ranking}`;
                 document.getElementById('cardPlayerQR').src = data.qrcode;
                 
+                // Update status indicator
+                const statusIndicator = document.getElementById('cardPlayerStatus');
+                const statusIcon = statusIndicator.querySelector('i');
+                const isActive = data.is_active || false;
+                statusIcon.style.color = isActive ? '#28a745' : '#dc3545';
+                statusIndicator.title = isActive ? 'Actif' : 'Inactif';
+                
                 // Afficher la carte
                 document.getElementById('playerProfileCard').style.display = 'block';
                 document.getElementById('cardProfileOverlay').style.display = 'block';
@@ -570,12 +584,19 @@
                 `<img src="/static/avatars/${p[2]}" alt="Avatar" class="player-avatar me-2" data-player-name="${p[0]}" style="width: 48px; height: 48px; border-radius: 50%; cursor: pointer;" title="Voir le profil de ${p[0]}">` : 
                 '<i class="fa-solid fa-user me-2" style="width: 48px; text-align: center;"></i>';
             
+            const isActive = p[3] !== undefined ? p[3] : false;
+            const statusColor = isActive ? '#28a745' : '#dc3545';
+            const statusTitle = isActive ? 'Actif' : 'Inactif';
+            
             document.getElementById('players_ranking').innerHTML += 
                 `<tr>
                     <td>
                         <div class="d-flex align-items-center">
                             ${avatarImg}
                             <span>${p[0]}</span>
+                            <span class="player-status-indicator ms-2" data-player-name="${p[0]}" title="${statusTitle}">
+                                <i class="fa-solid fa-circle" style="font-size: 10px; color: ${statusColor};"></i>
+                            </span>
                         </div>
                     </td>
                     <td><p id="${p[0]}_score">${p[1]}</p></td>
@@ -583,5 +604,24 @@
         }
         // Réattacher les gestionnaires d'événements
         attachAvatarClickHandlers();
+    });
+    
+    // Listen for player status changes and update the indicators
+    socket.on('player_status_changed', function(data) {
+        const playerName = data.player_name;
+        const isActive = data.is_active;
+        const statusColor = isActive ? '#28a745' : '#dc3545';
+        const statusTitle = isActive ? 'Actif' : 'Inactif';
+        
+        // Update all status indicators for this player
+        document.querySelectorAll(`.player-status-indicator[data-player-name="${playerName}"]`).forEach(function(indicator) {
+            const icon = indicator.querySelector('i');
+            if (icon) {
+                icon.style.color = statusColor;
+                indicator.title = statusTitle;
+            }
+        });
+        
+        console.log(`Player ${playerName} status changed to: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
     });
 </script>

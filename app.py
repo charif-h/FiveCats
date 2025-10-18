@@ -437,6 +437,34 @@ def get_end_game_message(reason, winner):
     }
     return messages.get(reason, 'Le jeu est terminé.')
 
+@socketio.on('player_connected')
+def handle_player_connected(data):
+    """Handle when a player opens their page"""
+    player_name = data.get('player_name')
+    player = next((p for p in players if p.name == player_name), None)
+    if player:
+        player.is_active = True
+        print(f'Player {player_name} is now ACTIVE')
+        # Broadcast updated player status to all clients
+        socketio.emit('player_status_changed', {
+            'player_name': player_name,
+            'is_active': True
+        })
+
+@socketio.on('player_disconnected')
+def handle_player_disconnected(data):
+    """Handle when a player closes their page"""
+    player_name = data.get('player_name')
+    player = next((p for p in players if p.name == player_name), None)
+    if player:
+        player.is_active = False
+        print(f'Player {player_name} is now INACTIVE')
+        # Broadcast updated player status to all clients
+        socketio.emit('player_status_changed', {
+            'player_name': player_name,
+            'is_active': False
+        })
+
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
@@ -481,10 +509,14 @@ def players_to_table(with_token = True):
             else:
                 p.avatar = 'default.png'
         
+        # Vérifier si le joueur a l'attribut is_active
+        if not hasattr(p, 'is_active'):
+            p.is_active = False
+        
         if with_token:
-            tbl.append([p.name, p.score, p.avatar, p.token])
+            tbl.append([p.name, p.score, p.avatar, p.token, p.is_active])
         else:
-            tbl.append([p.name, p.score, p.avatar])
+            tbl.append([p.name, p.score, p.avatar, p.is_active])
     return tbl
 
 def get_player_details():
@@ -502,13 +534,18 @@ def get_player_details():
                 p.avatar = random.choice(avatars) if avatars else 'default.png'
             else:
                 p.avatar = 'default.png'
+        
+        # Vérifier si le joueur a l'attribut is_active
+        if not hasattr(p, 'is_active'):
+            p.is_active = False
                 
         players_details.append({
             'name': p.name,
             'score': p.score,
             'avatar': p.avatar,
             'ranking': index + 1,
-            'qrcode': f"static/players/{p.name}.svg"
+            'qrcode': f"static/players/{p.name}.svg",
+            'is_active': p.is_active
         })
     return players_details
 
@@ -540,6 +577,8 @@ def newQuestion():
         return
     
     question = Question(imgs, players, choices)
+    # Set player status in the question
+    question.players_status = {p.name: p.is_active for p in players}
     imgs.remove(question.image)
     questions_asked += 1  # Increment question counter
     print(f'Question {questions_asked}/{total if end_mode == "questions" else "∞"} - {question.choices_to_json()}')
